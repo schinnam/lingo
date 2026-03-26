@@ -58,11 +58,11 @@
 
 | Feature | Status | Notes |
 |---|---|---|
-| FastMCP app mounted on FastAPI | ⬜ Not Started | Streamable HTTP transport |
-| `get_term(name)` tool | ⬜ Not Started | |
-| `search_terms(query, status?, limit?)` tool | ⬜ Not Started | |
-| `list_terms(category?, status?, limit?, offset?)` tool | ⬜ Not Started | |
-| Bearer token auth on `/mcp` | ⬜ Not Started | |
+| FastMCP app mounted on FastAPI | ✅ Done | Streamable HTTP at `/mcp/`; lifespan wired |
+| `get_term(name)` tool | ✅ Done | Case-insensitive name lookup |
+| `search_terms(query, status?, limit?)` tool | ✅ Done | Searches name + definition + full_name |
+| `list_terms(category?, status?, limit?, offset?)` tool | ✅ Done | Paginated, filterable |
+| Bearer token auth on `/mcp` | ✅ Done | MCPBearerAuthMiddleware; sha256 hash lookup |
 
 ---
 
@@ -145,10 +145,11 @@
 | Unit: VoteService | 8 | ✅ Passing |
 | Unit: API routes | 59 | ✅ Passing |
 | Unit: Auth Phase 2 | 14 | ✅ Passing |
+| Unit: MCP Phase 3 | 21 | ✅ Passing |
 | Integration: Postgres (real DB) | 0 | ⬜ Not Started |
 | Concurrency: vote race condition | 0 | ⬜ Not Started (P1) |
 
-**Total: 127 / 127 passing**
+**Total: 148 / 148 passing**
 
 ---
 

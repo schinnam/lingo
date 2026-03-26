@@ -61,6 +61,7 @@ dev-dependencies = [
     "httpx>=0.28.0",
     "anyio>=4.7.0",
     "aiosqlite>=0.22.1",
+    "asgi-lifespan>=2.1.0",
 ]
 
 [tool.pytest.ini_options]
