@@ -9,6 +9,7 @@ Configuration via environment variables:
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import Optional
 
 import httpx
@@ -24,9 +25,13 @@ app = typer.Typer(
 console = Console()
 err_console = Console(stderr=True, style="bold red")
 
+_DEFAULT_TIMEOUT = 30.0
+
 
 def _base_url() -> str:
-    return os.environ.get("LINGO_APP_URL", "http://localhost:8000").rstrip("/")
+    url = os.environ.get("LINGO_APP_URL", "http://localhost:8000")
+    # Ensure base_url ends with "/" so httpx appends paths correctly
+    return url if url.endswith("/") else url + "/"
 
 
 def _headers() -> dict:
@@ -40,6 +45,14 @@ def _headers() -> dict:
     return {}
 
 
+def _client() -> httpx.Client:
+    return httpx.Client(
+        base_url=_base_url(),
+        headers=_headers(),
+        timeout=_DEFAULT_TIMEOUT,
+    )
+
+
 # ---------------------------------------------------------------------------
 # define
 # ---------------------------------------------------------------------------
@@ -50,17 +63,16 @@ def define(
     term: str = typer.Argument(..., help="Term name to look up"),
 ):
     """Look up a term by name and display its definition."""
-    with httpx.Client(base_url=_base_url(), headers=_headers()) as client:
-        resp = client.get("/api/v1/terms", params={"q": term, "limit": 10})
-
-    try:
-        resp.raise_for_status()
-    except httpx.HTTPStatusError as exc:
-        err_console.print(f"API error: {exc.response.status_code}")
-        raise typer.Exit(1)
+    with _client() as client:
+        try:
+            resp = client.get("api/v1/terms", params={"q": term, "limit": 10})
+            resp.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            err_console.print(f"API error: {exc.response.status_code}")
+            raise typer.Exit(1)
 
     terms = resp.json()
-    # Filter to exact case-insensitive match first, then fuzzy
+    # Prefer exact case-insensitive match; fall back to first fuzzy result
     exact = [t for t in terms if t["name"].lower() == term.lower()]
     match = exact[0] if exact else (terms[0] if terms else None)
 
@@ -68,16 +80,21 @@ def define(
         err_console.print(f'Error: no term found for "{term}"')
         raise typer.Exit(1)
 
+    if not exact and terms:
+        console.print(f'[dim]No exact match for "{term}" — showing closest result.[/dim]')
+
     _print_term(match)
 
 
 def _print_term(term: dict) -> None:
-    console.print(f"\n┌─ [bold]{term['name']}[/bold]")
+    name = term.get("name", "?")
+    definition = term.get("definition", "(no definition)")
+    status = term.get("status", "unknown")
+    votes = term.get("vote_count", 0)
+    console.print(f"\n┌─ [bold]{name}[/bold]")
     if term.get("full_name"):
         console.print(f"├─ {term['full_name']}")
-    console.print(f"├─ Definition: {term['definition']}")
-    status = term["status"]
-    votes = term.get("vote_count", 0)
+    console.print(f"├─ Definition: {definition}")
     console.print(f"├─ Status: {status} ({votes} votes)")
     if term.get("category"):
         console.print(f"├─ Category: {term['category']}")
@@ -103,20 +120,19 @@ def add(
     if category:
         payload["category"] = category
 
-    with httpx.Client(base_url=_base_url(), headers=_headers()) as client:
-        resp = client.post("/api/v1/terms", json=payload)
-
-    try:
-        resp.raise_for_status()
-    except httpx.HTTPStatusError as exc:
-        err_console.print(f"API error: {exc.response.status_code}")
+    with _client() as client:
         try:
-            detail = exc.response.json().get("detail", "")
-            if detail:
-                err_console.print(detail)
-        except Exception:
-            pass
-        raise typer.Exit(1)
+            resp = client.post("api/v1/terms", json=payload)
+            resp.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            err_console.print(f"API error: {exc.response.status_code}")
+            try:
+                detail = exc.response.json().get("detail", "")
+                if detail:
+                    err_console.print(detail)
+            except Exception:
+                pass
+            raise typer.Exit(1)
 
     created = resp.json()
     console.print(f"[green]Added:[/green] {created['name']} (status: {created['status']})")
@@ -140,14 +156,13 @@ def list_terms(
     if category:
         params["category"] = category
 
-    with httpx.Client(base_url=_base_url(), headers=_headers()) as client:
-        resp = client.get("/api/v1/terms", params=params)
-
-    try:
-        resp.raise_for_status()
-    except httpx.HTTPStatusError as exc:
-        err_console.print(f"API error: {exc.response.status_code}")
-        raise typer.Exit(1)
+    with _client() as client:
+        try:
+            resp = client.get("api/v1/terms", params=params)
+            resp.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            err_console.print(f"API error: {exc.response.status_code}")
+            raise typer.Exit(1)
 
     terms = resp.json()
 
@@ -159,13 +174,10 @@ def list_terms(
     table.add_column("Name", style="bold")
     table.add_column("Status")
     table.add_column("Votes", justify="right")
-    table.add_column("Definition")
+    table.add_column("Definition", max_width=60, no_wrap=False)
 
     for t in terms:
-        defn = t["definition"]
-        if len(defn) > 60:
-            defn = defn[:57] + "..."
-        table.add_row(t["name"], t["status"], str(t.get("vote_count", 0)), defn)
+        table.add_row(t["name"], t["status"], str(t.get("vote_count", 0)), t["definition"])
 
     console.print(table)
 
@@ -183,20 +195,22 @@ def export(
     """Export glossary terms as Markdown."""
     params = {"status": status, "format": "markdown"}
 
-    with httpx.Client(base_url=_base_url(), headers=_headers()) as client:
-        resp = client.get("/api/v1/export", params=params)
-
-    try:
-        resp.raise_for_status()
-    except httpx.HTTPStatusError as exc:
-        err_console.print(f"API error: {exc.response.status_code}")
-        raise typer.Exit(1)
+    with _client() as client:
+        try:
+            resp = client.get("api/v1/export", params=params)
+            resp.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            err_console.print(f"API error: {exc.response.status_code}")
+            raise typer.Exit(1)
 
     content = resp.text
 
     if output:
-        with open(output, "w") as f:
-            f.write(content)
+        out_path = Path(output)
+        if not out_path.parent.exists():
+            err_console.print(f"Error: directory does not exist: {out_path.parent}")
+            raise typer.Exit(1)
+        out_path.write_text(content)
         console.print(f"[green]Exported to {output}[/green]")
     else:
         console.print(content)
