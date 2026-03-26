@@ -1,0 +1,34 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: lingo
+      POSTGRES_PASSWORD: lingo
+      POSTGRES_DB: lingo
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lingo"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  lingo:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      LINGO_DATABASE_URL: postgresql+asyncpg://lingo:lingo@postgres:5432/lingo
+      LINGO_DEV_MODE: "true"
+      LINGO_SECRET_KEY: "change-me-in-production"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      sh -c "uv run alembic upgrade head &&
+             uvicorn lingo.main:app --host 0.0.0.0 --port 8000 --workers 1"
+
+volumes:
+  pgdata:
