@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from lingo.api.routes import terms
@@ -69,6 +69,12 @@ if _static_dir.exists() and any(_static_dir.iterdir()):
     @app.get("/{full_path:path}", include_in_schema=False)
     async def spa_fallback(full_path: str):  # noqa: ARG001
         index = _static_dir / "index.html"
-        if index.exists():
-            return FileResponse(index)
-        return {"detail": "Frontend not built. Run `npm run build` in the frontend/ directory."}
+        if not index.exists():
+            return {"detail": "Frontend not built. Run `npm run build` in the frontend/ directory."}
+        html = index.read_text()
+        if settings.dev_mode:
+            html = html.replace(
+                "</head>",
+                '<meta name="lingo-dev-mode" content="true"></head>',
+            )
+        return HTMLResponse(content=html)
