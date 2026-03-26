@@ -47,10 +47,10 @@
 | Feature | Status | Notes |
 |---|---|---|
 | Dev mode auth (`LINGO_DEV_MODE=true`, X-User-Id header) | ✅ Done | Warning banner needed in UI |
-| OIDC/SSO middleware (Authlib) | ⬜ Not Started | Google Workspace, Okta, generic OIDC |
-| Role enforcement (member / editor / admin) | ⬜ Not Started | Middleware + per-route checks |
-| MCP Bearer token auth | ⬜ Not Started | sha256 hash lookup |
-| Token generation (32-byte crypto/rand → base64url) | ⬜ Not Started | |
+| OIDC/SSO middleware (Authlib) | ✅ Done | HS256 JWT; email claim upserts User; RS256/JWKS-URL path in v2 |
+| Role enforcement (member / editor / admin) | ✅ Done | `require_role` dep wired to all routes |
+| MCP Bearer token auth | ✅ Done | sha256 hash lookup; last_used_at updated on use |
+| Token generation (32-byte crypto/rand → base64url) | ✅ Done | |
 
 ---
 
@@ -144,10 +144,11 @@
 | Unit: TermService | 15 | ✅ Passing |
 | Unit: VoteService | 8 | ✅ Passing |
 | Unit: API routes | 59 | ✅ Passing |
+| Unit: Auth Phase 2 | 14 | ✅ Passing |
 | Integration: Postgres (real DB) | 0 | ⬜ Not Started |
 | Concurrency: vote race condition | 0 | ⬜ Not Started (P1) |
 
-**Total: 113 / 113 passing**
+**Total: 127 / 127 passing**
 
 ---
 
