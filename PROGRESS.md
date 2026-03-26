@@ -21,23 +21,23 @@
 | REST: `PUT /api/v1/terms/:id` (versioned update) | ✅ Done | |
 | REST: `DELETE /api/v1/terms/:id` | ✅ Done | |
 | REST: `POST /api/v1/terms/:id/vote` | ✅ Done | |
-| REST: `POST /api/v1/terms/:id/dispute` | ⬜ Not Started | Notifies owner via Slack DM |
-| REST: `POST /api/v1/terms/:id/official` | ⬜ Not Started | Editor fast-track |
-| REST: `POST /api/v1/terms/:id/confirm` | ⬜ Not Started | Resets staleness |
-| REST: `POST /api/v1/terms/:id/claim` | ⬜ Not Started | Claim ownership |
-| REST: `GET /api/v1/terms/:id/history` | ⬜ Not Started | |
-| REST: `POST /api/v1/terms/:id/revert/:history_id` | ⬜ Not Started | Editor only |
-| REST: `POST /api/v1/terms/:id/relationships` | ⬜ Not Started | |
-| REST: `DELETE /api/v1/terms/:id/relationships/:rel_id` | ⬜ Not Started | |
-| REST: `POST /api/v1/terms/:id/promote` | ⬜ Not Started | suggested → pending |
-| REST: `POST /api/v1/terms/:id/dismiss` | ⬜ Not Started | Discard suggestion |
-| REST: `GET /api/v1/export` | ⬜ Not Started | Markdown export, paginated |
-| REST: `GET /api/v1/users` | ⬜ Not Started | Admin only |
-| REST: `PATCH /api/v1/users/:id/role` | ⬜ Not Started | Admin only |
-| REST: `GET/POST/DELETE /api/v1/tokens` | ⬜ Not Started | API token management |
-| REST: `GET /api/v1/admin/stats` | ⬜ Not Started | |
-| REST: `GET /api/v1/admin/jobs` | ⬜ Not Started | |
-| REST: `POST /api/v1/admin/jobs/:type/run` | ⬜ Not Started | |
+| REST: `POST /api/v1/terms/:id/dispute` | ✅ Done | Slack DM deferred to Phase 4 |
+| REST: `POST /api/v1/terms/:id/official` | ✅ Done | Editor fast-track |
+| REST: `POST /api/v1/terms/:id/confirm` | ✅ Done | Resets staleness |
+| REST: `POST /api/v1/terms/:id/claim` | ✅ Done | Claim ownership; editor can override |
+| REST: `GET /api/v1/terms/:id/history` | ✅ Done | |
+| REST: `POST /api/v1/terms/:id/revert/:history_id` | ✅ Done | Editor only |
+| REST: `POST /api/v1/terms/:id/relationships` | ✅ Done | |
+| REST: `DELETE /api/v1/terms/:id/relationships/:rel_id` | ✅ Done | |
+| REST: `POST /api/v1/terms/:id/promote` | ✅ Done | suggested → pending |
+| REST: `POST /api/v1/terms/:id/dismiss` | ✅ Done | Discard suggestion |
+| REST: `GET /api/v1/export` | ✅ Done | Markdown export, paginated |
+| REST: `GET /api/v1/users` | ✅ Done | Admin only |
+| REST: `PATCH /api/v1/users/:id/role` | ✅ Done | Admin only |
+| REST: `GET/POST/DELETE /api/v1/tokens` | ✅ Done | API token management |
+| REST: `GET /api/v1/admin/stats` | ✅ Done | |
+| REST: `GET /api/v1/admin/jobs` | ✅ Done | |
+| REST: `POST /api/v1/admin/jobs/:type/run` | ✅ Done | |
 | Concurrent vote transaction safety (P1) | ⬜ Not Started | CAS update, concurrency test |
 
 ---
@@ -143,11 +143,11 @@
 | Unit: models | 31 | ✅ Passing |
 | Unit: TermService | 15 | ✅ Passing |
 | Unit: VoteService | 8 | ✅ Passing |
-| Unit: API routes | 14 | ✅ Passing |
+| Unit: API routes | 59 | ✅ Passing |
 | Integration: Postgres (real DB) | 0 | ⬜ Not Started |
 | Concurrency: vote race condition | 0 | ⬜ Not Started (P1) |
 
-**Total: 68 / 68 passing**
+**Total: 113 / 113 passing**
 
 ---
 

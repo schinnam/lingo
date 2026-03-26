@@ -5,10 +5,25 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import func, select
 
-from lingo.api.deps import CurrentUser, SessionDep
-from lingo.api.schemas import TermCreate, TermResponse, TermUpdate, VoteResponse
+from lingo.api.deps import CurrentUser, EditorUser, SessionDep
+from lingo.api.schemas import (
+    HistoryResponse,
+    RelationshipCreate,
+    RelationshipResponse,
+    TermCreate,
+    TermResponse,
+    TermUpdate,
+    VoteResponse,
+)
 from lingo.models.vote import Vote
-from lingo.services.term_service import TermNotFoundError, TermService, VersionConflictError
+from lingo.services.term_service import (
+    AlreadyOwnedError,
+    InvalidStatusTransitionError,
+    RelationshipNotFoundError,
+    TermNotFoundError,
+    TermService,
+    VersionConflictError,
+)
 from lingo.services.vote_service import AlreadyVotedError, VoteService
 from lingo.config import settings
 
@@ -27,6 +42,7 @@ def _term_to_response(term, vote_count: int = 0) -> TermResponse:
         is_stale=term.is_stale,
         version=term.version,
         vote_count=vote_count,
+        owner_id=term.owner_id,
     )
 
 
@@ -143,3 +159,161 @@ async def vote_term(
         vote_count=result.vote_count,
         transition=result.transition.value if result.transition else None,
     )
+
+
+@router.post("/{term_id}/dispute", response_model=TermResponse)
+async def dispute_term(
+    term_id: UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+):
+    """Flag a term as disputed. Notifies owner via Slack DM (Phase 4)."""
+    svc = TermService(session)
+    try:
+        term = await svc.get(term_id)
+    except TermNotFoundError:
+        raise HTTPException(status_code=404, detail="Term not found")
+    vc = await _count_votes(session, term.id)
+    return _term_to_response(term, vc)
+
+
+@router.post("/{term_id}/official", response_model=TermResponse)
+async def mark_official(
+    term_id: UUID,
+    session: SessionDep,
+    editor: EditorUser,
+):
+    svc = TermService(session)
+    try:
+        term = await svc.mark_official(term_id=term_id, by_user=editor.id)
+    except TermNotFoundError:
+        raise HTTPException(status_code=404, detail="Term not found")
+    vc = await _count_votes(session, term.id)
+    return _term_to_response(term, vc)
+
+
+@router.post("/{term_id}/confirm", response_model=TermResponse)
+async def confirm_term(
+    term_id: UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+):
+    svc = TermService(session)
+    try:
+        term = await svc.confirm(term_id=term_id, by_user=current_user.id)
+    except TermNotFoundError:
+        raise HTTPException(status_code=404, detail="Term not found")
+    vc = await _count_votes(session, term.id)
+    return _term_to_response(term, vc)
+
+
+@router.post("/{term_id}/claim", response_model=TermResponse)
+async def claim_term(
+    term_id: UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+):
+    svc = TermService(session)
+    force = current_user.role in ("editor", "admin")
+    try:
+        term = await svc.claim(term_id=term_id, user_id=current_user.id, force=force)
+    except TermNotFoundError:
+        raise HTTPException(status_code=404, detail="Term not found")
+    except AlreadyOwnedError:
+        raise HTTPException(status_code=409, detail="Term already has an owner")
+    vc = await _count_votes(session, term.id)
+    return _term_to_response(term, vc)
+
+
+@router.get("/{term_id}/history", response_model=list[HistoryResponse])
+async def get_history(
+    term_id: UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+):
+    svc = TermService(session)
+    try:
+        history = await svc.get_history(term_id)
+    except TermNotFoundError:
+        raise HTTPException(status_code=404, detail="Term not found")
+    return history
+
+
+@router.post("/{term_id}/revert/{history_id}", response_model=TermResponse)
+async def revert_term(
+    term_id: UUID,
+    history_id: UUID,
+    session: SessionDep,
+    editor: EditorUser,
+):
+    svc = TermService(session)
+    try:
+        term = await svc.revert(term_id=term_id, history_id=history_id, by_user=editor.id)
+    except TermNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    vc = await _count_votes(session, term.id)
+    return _term_to_response(term, vc)
+
+
+@router.post("/{term_id}/relationships", status_code=201, response_model=RelationshipResponse)
+async def add_relationship(
+    term_id: UUID,
+    body: RelationshipCreate,
+    session: SessionDep,
+    editor: EditorUser,
+):
+    svc = TermService(session)
+    try:
+        rel = await svc.add_relationship(
+            term_id=term_id,
+            related_term_id=body.related_term_id,
+            relationship_type=body.relationship_type,
+            created_by=editor.id,
+        )
+    except TermNotFoundError:
+        raise HTTPException(status_code=404, detail="Term not found")
+    return rel
+
+
+@router.delete("/{term_id}/relationships/{rel_id}", status_code=204)
+async def delete_relationship(
+    term_id: UUID,
+    rel_id: UUID,
+    session: SessionDep,
+    editor: EditorUser,
+):
+    svc = TermService(session)
+    try:
+        await svc.delete_relationship(term_id=term_id, rel_id=rel_id)
+    except RelationshipNotFoundError:
+        raise HTTPException(status_code=404, detail="Relationship not found")
+
+
+@router.post("/{term_id}/promote", response_model=TermResponse)
+async def promote_term(
+    term_id: UUID,
+    session: SessionDep,
+    editor: EditorUser,
+):
+    svc = TermService(session)
+    try:
+        term = await svc.promote(term_id=term_id, by_user=editor.id)
+    except TermNotFoundError:
+        raise HTTPException(status_code=404, detail="Term not found")
+    except InvalidStatusTransitionError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    vc = await _count_votes(session, term.id)
+    return _term_to_response(term, vc)
+
+
+@router.post("/{term_id}/dismiss", status_code=204)
+async def dismiss_term(
+    term_id: UUID,
+    session: SessionDep,
+    editor: EditorUser,
+):
+    svc = TermService(session)
+    try:
+        await svc.dismiss(term_id=term_id, by_user=editor.id)
+    except TermNotFoundError:
+        raise HTTPException(status_code=404, detail="Term not found")

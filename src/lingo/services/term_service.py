@@ -1,4 +1,5 @@
 """Term CRUD service layer."""
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
@@ -7,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lingo.models.term import Term
 from lingo.models.term_history import TermHistory
+from lingo.models.term_relationship import TermRelationship
 
 
 class TermNotFoundError(Exception):
@@ -14,6 +16,18 @@ class TermNotFoundError(Exception):
 
 
 class VersionConflictError(Exception):
+    pass
+
+
+class AlreadyOwnedError(Exception):
+    pass
+
+
+class RelationshipNotFoundError(Exception):
+    pass
+
+
+class InvalidStatusTransitionError(Exception):
     pass
 
 
@@ -125,4 +139,158 @@ class TermService:
         if term is None:
             raise TermNotFoundError(f"Term {term_id} not found")
         await self._session.delete(term)
+        await self._session.commit()
+
+    # ------------------------------------------------------------------
+    # Actions
+    # ------------------------------------------------------------------
+
+    async def mark_official(self, term_id: UUID, by_user: UUID) -> Term:
+        term = await self._session.get(Term, term_id)
+        if term is None:
+            raise TermNotFoundError(f"Term {term_id} not found")
+        snapshot = TermHistory(
+            term_id=term.id,
+            definition=term.definition,
+            full_name=term.full_name,
+            category=term.category,
+            owner_id=term.owner_id,
+            status=term.status,
+            changed_by=by_user,
+            change_note="Marked official by editor",
+        )
+        self._session.add(snapshot)
+        term.status = "official"
+        term.version += 1
+        await self._session.commit()
+        await self._session.refresh(term)
+        return term
+
+    async def confirm(self, term_id: UUID, by_user: UUID) -> Term:
+        term = await self._session.get(Term, term_id)
+        if term is None:
+            raise TermNotFoundError(f"Term {term_id} not found")
+        term.is_stale = False
+        term.last_confirmed_at = datetime.now(timezone.utc)
+        await self._session.commit()
+        await self._session.refresh(term)
+        return term
+
+    async def claim(self, term_id: UUID, user_id: UUID, force: bool = False) -> Term:
+        term = await self._session.get(Term, term_id)
+        if term is None:
+            raise TermNotFoundError(f"Term {term_id} not found")
+        if term.owner_id is not None and not force:
+            raise AlreadyOwnedError(f"Term {term_id} already has an owner")
+        term.owner_id = user_id
+        term.owned_at = datetime.now(timezone.utc)
+        await self._session.commit()
+        await self._session.refresh(term)
+        return term
+
+    async def promote(self, term_id: UUID, by_user: UUID) -> Term:
+        """Promote a suggested term to pending."""
+        term = await self._session.get(Term, term_id)
+        if term is None:
+            raise TermNotFoundError(f"Term {term_id} not found")
+        if term.status != "suggested":
+            raise InvalidStatusTransitionError(
+                f"Term must be in 'suggested' status to promote, got '{term.status}'"
+            )
+        snapshot = TermHistory(
+            term_id=term.id,
+            definition=term.definition,
+            full_name=term.full_name,
+            category=term.category,
+            owner_id=term.owner_id,
+            status=term.status,
+            changed_by=by_user,
+            change_note="Promoted from suggested to pending",
+        )
+        self._session.add(snapshot)
+        term.status = "pending"
+        term.version += 1
+        await self._session.commit()
+        await self._session.refresh(term)
+        return term
+
+    async def dismiss(self, term_id: UUID, by_user: UUID) -> None:
+        """Discard a suggested term."""
+        term = await self._session.get(Term, term_id)
+        if term is None:
+            raise TermNotFoundError(f"Term {term_id} not found")
+        await self._session.delete(term)
+        await self._session.commit()
+
+    # ------------------------------------------------------------------
+    # History
+    # ------------------------------------------------------------------
+
+    async def get_history(self, term_id: UUID) -> list[TermHistory]:
+        term = await self._session.get(Term, term_id)
+        if term is None:
+            raise TermNotFoundError(f"Term {term_id} not found")
+        stmt = select(TermHistory).where(TermHistory.term_id == term_id)
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def revert(self, term_id: UUID, history_id: UUID, by_user: UUID) -> Term:
+        term = await self._session.get(Term, term_id)
+        if term is None:
+            raise TermNotFoundError(f"Term {term_id} not found")
+        snapshot = await self._session.get(TermHistory, history_id)
+        if snapshot is None or snapshot.term_id != term_id:
+            raise TermNotFoundError(f"History entry {history_id} not found")
+
+        # Snapshot current state before reverting
+        pre_revert = TermHistory(
+            term_id=term.id,
+            definition=term.definition,
+            full_name=term.full_name,
+            category=term.category,
+            owner_id=term.owner_id,
+            status=term.status,
+            changed_by=by_user,
+            change_note=f"Reverted to history {history_id}",
+        )
+        self._session.add(pre_revert)
+
+        if snapshot.definition is not None:
+            term.definition = snapshot.definition
+        if snapshot.full_name is not None:
+            term.full_name = snapshot.full_name
+        if snapshot.category is not None:
+            term.category = snapshot.category
+        term.version += 1
+
+        await self._session.commit()
+        await self._session.refresh(term)
+        return term
+
+    # ------------------------------------------------------------------
+    # Relationships
+    # ------------------------------------------------------------------
+
+    async def add_relationship(
+        self, term_id: UUID, related_term_id: UUID, relationship_type: str, created_by: UUID
+    ) -> TermRelationship:
+        term = await self._session.get(Term, term_id)
+        if term is None:
+            raise TermNotFoundError(f"Term {term_id} not found")
+        rel = TermRelationship(
+            term_id=term_id,
+            related_term_id=related_term_id,
+            relationship_type=relationship_type,
+            created_by=created_by,
+        )
+        self._session.add(rel)
+        await self._session.commit()
+        await self._session.refresh(rel)
+        return rel
+
+    async def delete_relationship(self, term_id: UUID, rel_id: UUID) -> None:
+        rel = await self._session.get(TermRelationship, rel_id)
+        if rel is None or rel.term_id != term_id:
+            raise RelationshipNotFoundError(f"Relationship {rel_id} not found")
+        await self._session.delete(rel)
         await self._session.commit()
