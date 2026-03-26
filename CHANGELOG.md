@@ -3,6 +3,15 @@
 All notable changes to Lingo are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.3.0] - 2026-03-26
+
+### Added
+- APScheduler `AsyncIOScheduler` wired into the FastAPI lifespan (`src/lingo/scheduler/setup.py`); starts on boot, shuts down gracefully (requires `--workers 1`)
+- `LingoDiscoveryJob` — daily 2 AM job that scans all public Slack channels over a 90-day window, extracts acronyms matching `\b[A-Z]{2,6}\b`, and creates `suggested` terms for any not already in the glossary (`src/lingo/scheduler/jobs/discovery.py`)
+- `LingoStalenessJob` — weekly Monday 3 AM job that flags terms whose `last_confirmed_at` exceeds `LINGO_STALE_THRESHOLD_DAYS` and DMs their owners via the existing `send_staleness_dm` helper (`src/lingo/scheduler/jobs/staleness.py`)
+- Both jobs persist a `Job` row with `status`, `progress_json` (channels scanned, terms found / terms flagged, DMs sent), and `error` on failure
+- 17 new unit tests covering scheduler setup, discovery job, and staleness job (182 total, all passing)
+
 ## [0.2.0] - 2026-03-26
 
 ### Added

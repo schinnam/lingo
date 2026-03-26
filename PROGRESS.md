@@ -85,10 +85,10 @@
 
 | Feature | Status | Notes |
 |---|---|---|
-| APScheduler AsyncIOScheduler setup | ⬜ Not Started | `--workers 1` required |
-| LingoDiscoveryJob — scan Slack history for acronyms | ⬜ Not Started | Regex `\b[A-Z]{2,6}\b`, 90-day window |
-| LingoStalenessJob — weekly stale flag + DM | ⬜ Not Started | `LINGO_STALE_THRESHOLD_DAYS` |
-| Job progress tracking (progress_json) | ⬜ Not Started | Resumable |
+| APScheduler AsyncIOScheduler setup | ✅ Done | `--workers 1` required; wired into FastAPI lifespan |
+| LingoDiscoveryJob — scan Slack history for acronyms | ✅ Done | Regex `\b[A-Z]{2,6}\b`, 90-day window; creates `suggested` terms |
+| LingoStalenessJob — weekly stale flag + DM | ✅ Done | `LINGO_STALE_THRESHOLD_DAYS`; DMs owners via `send_staleness_dm` |
+| Job progress tracking (progress_json) | ✅ Done | Both jobs write progress_json; failed jobs record error message |
 
 ---
 
@@ -147,10 +147,11 @@
 | Unit: Auth Phase 2 | 14 | ✅ Passing |
 | Unit: MCP Phase 3 | 21 | ✅ Passing |
 | Unit: Slack Phase 4 | 17 | ✅ Passing |
+| Unit: Scheduler Phase 5 | 17 | ✅ Passing |
 | Integration: Postgres (real DB) | 0 | ⬜ Not Started |
 | Concurrency: vote race condition | 0 | ⬜ Not Started (P1) |
 
-**Total: 165 / 165 passing**
+**Total: 182 / 182 passing**
 
 ---
 

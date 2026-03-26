@@ -455,11 +455,11 @@ Pill shape, `border-radius: 9999px`, 11px uppercase text. Colors from system abo
 
 ### Frontend Stack
 
-- **Framework:** React + Vite — compiled to `/static/`, served by Go as static files
+- **Framework:** React + Vite — compiled to `src/lingo/static/`, served by FastAPI as static files
 - **CSS:** Tailwind CSS — token values map to `tailwind.config.js` CSS variables
 - **Components:** shadcn/ui (Radix primitives) — Button, Badge, Dialog, Command (search), Popover
 - **State:** React Query for server state (term list, search, detail); local state for optimistic updates
-- **No server-side templating** — Go serves the compiled bundle; all rendering is client-side
+- **No server-side templating** — FastAPI serves the compiled bundle; all rendering is client-side
 
 ### No-card Rule
 

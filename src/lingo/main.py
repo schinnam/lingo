@@ -5,8 +5,11 @@ from fastapi import FastAPI
 
 from lingo.api.routes import terms
 from lingo.api.routes import export, users, tokens, admin
+from lingo.config import settings
+from lingo.db.session import SessionFactory
 from lingo.mcp.app import mcp
 from lingo.mcp.auth import MCPBearerAuthMiddleware
+from lingo.scheduler.setup import create_scheduler
 
 # Build the MCP ASGI app first so we can wire its lifespan into FastAPI
 _mcp_asgi = mcp.http_app(path="/")
@@ -15,8 +18,22 @@ _mcp_asgi = mcp.http_app(path="/")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Wrap FastMCP's lifespan so its session manager starts with the server."""
+    # Build Slack client only if tokens are configured
+    slack_client = None
+    if settings.slack_bot_token:
+        from slack_sdk.web.async_client import AsyncWebClient
+        slack_client = AsyncWebClient(token=settings.slack_bot_token)
+
+    scheduler = create_scheduler(
+        session_factory=SessionFactory,
+        slack_client=slack_client,
+    )
+    scheduler.start()
+
     async with _mcp_asgi.lifespan(app):
         yield
+
+    scheduler.shutdown(wait=False)
 
 
 app = FastAPI(
