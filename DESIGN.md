@@ -564,20 +564,39 @@ Sidebar filters collapse to horizontal pill row. Detail panel fills right half.
 ├─ Definition: A centralized hub for resource allocation...
 ├─ Status: Official (12 votes)
 ├─ Category: Operations
-├─ Owner: alice@company.com
-├─ Last confirmed: 3 days ago
-└─ Related: FMTL (depends on), BART-LEGACY (supersedes)
+└
+
+# Fuzzy match (no exact result): lingo define BART
+No exact match for "BART" — showing closest result.
+┌─ BART2
+├─ ...
+└
 
 # Not found: lingo define UNKNWN
 Error: no term found for "UNKNWN"
-Did you mean: UNKNOWN? Run: lingo define UNKNOWN
 
-# Search: lingo search resource
-Found 3 terms matching "resource":
-  BART    Official  A centralized hub for resource allocation...
-  RESQ    Community Resource Queue management system
-  ...
+# Add a term: lingo add BART "A centralized hub for resource allocation" --full-name "Business Arts Resource Tool" --category Operations
+Added: BART (status: pending)
+
+# List terms: lingo list --status official --limit 10
+ Name   Status    Votes  Definition
+ BART   official  12     A centralized hub for resource...
+ FMTL   official  7      Field Management Tool...
+
+# Export to stdout: lingo export --status official
+# Lingo Glossary
+
+## BART
+...
+
+# Export to file: lingo export --status official --output glossary.md
+Exported to glossary.md
 ```
+
+Configuration (environment variables):
+- `LINGO_APP_URL` — base URL of the Lingo server (default: `http://localhost:8000`)
+- `LINGO_API_TOKEN` — Bearer token for authentication (optional in dev mode)
+- `LINGO_DEV_USER_ID` — dev mode user ID header (`X-User-Id`) when `LINGO_API_TOKEN` is unset
 
 ### First-Run Setup Wizard States
 

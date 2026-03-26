@@ -96,11 +96,11 @@
 
 | Feature | Status | Notes |
 |---|---|---|
-| Typer app entry point (`lingo` command) | ⬜ Not Started | |
-| `lingo define <term>` | ⬜ Not Started | |
-| `lingo add` | ⬜ Not Started | |
-| `lingo list` | ⬜ Not Started | |
-| `lingo export` | ⬜ Not Started | |
+| Typer app entry point (`lingo` command) | ✅ Done | `lingo.cli.main:app`; entry point in pyproject.toml |
+| `lingo define <term>` | ✅ Done | Case-insensitive; exact match first |
+| `lingo add` | ✅ Done | `--full-name`, `--category` options |
+| `lingo list` | ✅ Done | `--status`, `--category`, `--limit` filters; rich table |
+| `lingo export` | ✅ Done | `--status` filter; `--output` file; prints Markdown |
 
 ---
 
@@ -148,10 +148,11 @@
 | Unit: MCP Phase 3 | 21 | ✅ Passing |
 | Unit: Slack Phase 4 | 17 | ✅ Passing |
 | Unit: Scheduler Phase 5 | 17 | ✅ Passing |
+| Unit: CLI Phase 6 | 16 | ✅ Passing |
 | Integration: Postgres (real DB) | 0 | ⬜ Not Started |
 | Concurrency: vote race condition | 0 | ⬜ Not Started (P1) |
 
-**Total: 182 / 182 passing**
+**Total: 198 / 198 passing**
 
 ---
 

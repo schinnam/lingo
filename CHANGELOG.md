@@ -3,6 +3,17 @@
 All notable changes to Lingo are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.4.0] - 2026-03-26
+
+### Added
+- `lingo` CLI entry point (`src/lingo/cli/main.py`) via Typer, pip-installable as `lingo` command
+- `lingo define <term>` — looks up a term by name via the REST API; exact case-insensitive match first, then first result; rich-formatted output with name, full name, definition, status, vote count, and category
+- `lingo add <term> <definition>` — adds a new term to the glossary; `--full-name`/`-f` and `--category`/`-c` options
+- `lingo list` — displays glossary terms in a rich table; supports `--status`/`-s`, `--category`/`-c`, and `--limit`/`-n` filters
+- `lingo export` — exports glossary as Markdown to stdout or `--output`/`-o` file; `--status`/`-s` filter (default: official)
+- CLI reads `LINGO_APP_URL` (default `http://localhost:8000`), `LINGO_API_TOKEN` (Bearer auth), and `LINGO_DEV_USER_ID` (dev mode X-User-Id header)
+- 16 new unit tests covering all commands, options, error paths, and file export (198 total, all passing)
+
 ## [0.3.0] - 2026-03-26
 
 ### Added
