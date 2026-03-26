@@ -78,15 +78,17 @@ complexity but completes the vision. The three surfaces (web, Slack, CLI) share
 the same data layer and auth.
 
 **Tech stack recommendation:**
-- **Backend:** Go — single binary, no runtime dependency, ideal for self-hosted Docker
-- **Database:** Postgres (pgx driver) — native FTS, proper concurrency, no dual-driver complexity
-- **ORM/query layer:** sqlc — type-safe Go codegen from SQL schema; schema-first migrations
-- **Auth:** OIDC/SAML middleware — supports Google Workspace, Okta, generic SAML
-- **Slack:** slack-go/slack in Socket Mode — no public URL required, works behind firewalls
-- **MCP:** `/mcp` endpoint (custom HTTP handler) — auth via API tokens (Bearer)
-- **CLI:** `lingo` — client CLI binary; uses cobra. If a server binary is needed, it ships as `lingo-server`.
-- **Frontend:** React + Vite — compiled to `/static/`, served by Go; Tailwind CSS + shadcn/ui
-- **Deploy:** Docker + docker-compose (lingo-server + postgres); Helm chart for Kubernetes
+- **Backend:** Python 3.12 + FastAPI — async, type-annotated, OpenAPI docs for free
+- **Package manager:** uv — fast lockfile-based dependency management; no pip/venv ceremony
+- **Database:** Postgres (asyncpg driver via SQLAlchemy 2.0 async) — native FTS, proper concurrency
+- **ORM/query layer:** SQLAlchemy 2.0 (async) — type-safe queries; Alembic for schema migrations
+- **Auth:** Authlib — OIDC/SAML middleware; supports Google Workspace, Okta, generic OIDC
+- **Slack:** slack-bolt (Python) `AsyncApp` in Socket Mode — no public URL required, works behind firewalls; static bot token (`SLACK_BOT_TOKEN` env var, no `InstallationStore` needed — single-workspace bot); lifespan shutdown: `asyncio.shield(handler.close_async())` (workaround for bolt-python #1112)
+- **MCP:** FastMCP (`fastmcp`) + `mcp` Python SDK — Streamable HTTP transport (SSE deprecated); mounted via `streamable_http_app()` on FastAPI with combined lifespan; Bearer token auth
+- **CLI:** `lingo` CLI — Typer (Click-based, type-annotated); ships as a pip-installable entry point
+- **Frontend:** React + Vite — compiled to `src/lingo/static/`, served by FastAPI as static files; Tailwind CSS + shadcn/ui
+- **Scheduler:** APScheduler 3.x `AsyncIOScheduler` — in-process cron for Discovery and Staleness jobs; **deploy with `--workers 1`** (multi-worker deployments fire duplicate jobs — duplicate Slack DMs)
+- **Deploy:** Docker + docker-compose (lingo + postgres); Helm chart for Kubernetes; `python:3.12-slim` base image; `CMD ["uvicorn", "lingo.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]`
 
 **Status model:**
 ```
@@ -139,6 +141,9 @@ Term {
   ) STORED
 }
 INDEX terms_search_vector_idx ON terms USING GIN (search_vector)
+-- Fuzzy search via pg_trgm (CREATE EXTENSION pg_trgm in initial migration)
+INDEX terms_name_trgm_idx ON terms USING GIN (name gin_trgm_ops)
+-- "Did you mean?" query: SELECT name FROM terms WHERE similarity(name, $query) >= 0.3 ORDER BY similarity DESC LIMIT 3
 
 Term_Relationship {
   id               uuid PK
@@ -606,6 +611,47 @@ These were previously open questions — now resolved:
 
 5. **Staleness admin queue:** Accessible via Status filter in main UI (filter `is_stale=true`). Admin nav bar link "Needs Review (N)" surfaces this filtered view directly.
 
+6. **SQLAlchemy async session pattern:** Use `async_sessionmaker` + `Depends(get_db)` for request-scoped sessions. Never use `async_scoped_session` with FastAPI (DI already handles scoping). Never share a single `AsyncSession` across concurrent `asyncio.gather()` tasks — each task needs its own session. Set `expire_on_commit=False` to prevent `MissingGreenlet` errors on attribute access post-commit. DB URL must use `postgresql+asyncpg://` (not `postgresql://` — silent fallback to sync I/O blocks the event loop under load).
+
+7. **Alembic migration execution:** Migrations run as a **separate process before the app starts** (docker-compose `command: sh -c 'alembic upgrade head && uvicorn ...'` or a Kubernetes init container). Never run `alembic upgrade head` inside FastAPI lifespan — blocks startup, and `asyncio.run()` raises `RuntimeError` if an event loop already exists. Failed migration = failed deployment (intentional — prevents app from starting against wrong schema).
+
+8. **K8s replica constraint:** APScheduler fires once per process. Multi-replica Kubernetes deployments (replicas > 1) will fire scheduled jobs (LingoDiscoveryJob, LingoStalenessJob) once per replica, resulting in duplicate Slack DMs and duplicate DB writes. **Set `replicaCount: 1` in Helm values when running with the built-in scheduler.** Multi-replica support with distributed locking (Postgres advisory locks) is a v2 item.
+
+9. **Vote locking strategy:** Votes use **composite PK deduplication** (INSERT raises IntegrityError for duplicate) + a **CAS UPDATE** (`UPDATE terms SET status=$new, version=version+1 WHERE id=$id AND version=$current_version AND vote_count >= threshold`). No `SELECT FOR UPDATE` on the `terms` row — avoids deadlock with optimistic locking on term edits.
+
+10. **DEV_MODE production guard:** `LINGO_DEV_MODE=true` bypasses OIDC auth. A startup assertion in `main.py` lifespan raises `RuntimeError` if `settings.dev_mode=True` and `settings.environment='production'`. `LINGO_ENV` defaults to `'development'`; must be explicitly set to `'production'` in prod deployments.
+
+11. **LingoStalenessJob DM rate limiting:** DMs are sent at max 30/minute (`asyncio.sleep(2)` between each) to stay within Slack's `chat.postMessage` rate limit (~1/second). This prevents bot rate-limiting on first runs against large glossaries.
+
+12. **Bootstrap TOCTOU protection:** The `/setup` handler acquires `pg_try_advisory_xact_lock(hashtext('lingo_bootstrap'))` before checking user count. If the lock is not acquired (another request is in progress), return 503. Lock is released automatically on transaction commit/rollback.
+
+13. **pg_trgm managed Postgres:** Initial migration uses `CREATE EXTENSION IF NOT EXISTS pg_trgm`. Managed Postgres users (RDS, Cloud SQL, Azure DB) must enable pg_trgm in their parameter group/console before deploying. This is documented in the quickstart README as a prerequisite.
+
+## Testing Conventions
+
+**Framework:** pytest + pytest-asyncio (`asyncio_mode = 'auto'` in pyproject.toml — no per-test decorator needed)
+
+**API testing:** `httpx.AsyncClient` with `ASGITransport` — runs the full FastAPI app in-process against a real test DB:
+```python
+# tests/conftest.py
+@pytest.fixture
+async def client(db_session):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url='http://test') as ac:
+        yield ac
+```
+
+**Test database:** Real Postgres only — no SQLite (hides asyncpg-specific behavior: FTS queries, `SELECT FOR UPDATE`, UUID types). Use a dedicated test DB via `LINGO_TEST_DATABASE_URL` env var. Run `alembic upgrade head` against the test DB before tests.
+
+**Dev dependencies:** `pytest`, `pytest-asyncio`, `httpx`, `factory-boy` (fixtures), `pytest-cov`
+
+**Critical test requirements (from coverage diagram):**
+- `test_vote_concurrent_at_threshold` — 5 concurrent `asyncio.gather()` tasks voting at the threshold boundary; assert exactly 1 status transition fires
+- `test_setup_blocked_after_first_admin` — `/setup` returns 404 after admin exists
+- `test_staleness_job_skips_suggested` — LingoStalenessJob never sets `is_stale=True` on `suggested` terms
+- `test_vote_dedup_at_db_level` — second vote from same user raises IntegrityError (Vote composite PK), caught and returned as 409
+
+**TDD protocol (from project memory):** Red/green TDD. Write the failing test first, then implement. Use `/tdd` skill for each new feature or endpoint.
+
 ## Open Questions
 
 - Should the CLI support offline/cached mode?
@@ -622,7 +668,7 @@ These were previously open questions — now resolved:
 ## Distribution Plan
 
 - Docker Hub: `yourorg/lingo:latest`
-- GitHub Releases: prebuilt CLI binaries (macOS, Linux, Windows) — binary named `lingo`
+- PyPI: `lingo-cli` package — `pip install lingo-cli` or `uvx lingo` for one-off runs
 - `brew tap` for macOS CLI (stretch goal)
 
 **Self-host quickstart (docker-compose):**
@@ -644,7 +690,7 @@ helm install lingo lingo/lingo \
 ```
 
 **Helm chart scope:**
-- `lingo-server` Deployment + Service (ClusterIP)
+- `lingo` Deployment + Service (ClusterIP)
 - Optional Ingress (nginx/traefik annotations, TLS via cert-manager)
 - Postgres dependency via Bitnami chart (optional — `postgres.external=true` to BYO)
 - ConfigMap for non-secret env vars; Secret for tokens/credentials
@@ -652,13 +698,13 @@ helm install lingo lingo/lingo \
 - PodDisruptionBudget (minAvailable: 1)
 - ReadinessProbe: `GET /health` → 200
 - LivenessProbe: `GET /health` → 200
-- Resource defaults: `requests: cpu=100m, memory=128Mi` / `limits: cpu=500m, memory=256Mi`
+- Resource defaults: `requests: cpu=200m, memory=256Mi` / `limits: cpu=500m, memory=512Mi`
 - Chart published to GitHub Pages via `helm/chart-releaser-action`
 
 **CI/CD:**
-- GitHub Actions: build + test on PR, publish Docker image on merge to main
-- Multi-arch Docker build (linux/amd64, linux/arm64)
-- CLI binaries via GoReleaser (produces `lingo` client CLI and `lingo-server` binaries)
+- GitHub Actions: `uv run pytest` + lint (`ruff`) on PR, publish Docker image on merge to main
+- Multi-arch Docker build (linux/amd64, linux/arm64) via `python:3.12-slim`
+- PyPI publish via `uv build` + `uv publish` on release tag
 - Helm chart lint + test (`helm lint`, `helm unittest`) on PR; publish chart on release tag
 
 ## First-Run Setup
@@ -683,31 +729,92 @@ The `/setup` route:
 
 Risk-first order: prototype the two highest-risk external integrations (MCP transport, Slack Socket Mode) before building full infrastructure.
 
-1. Scaffold Go project — cobra, sqlc schema, Postgres migrations (all tables including Job)
-2. **Spike: MCP endpoint** — validate transport (HTTP+SSE), tool schemas, Bearer token auth with Claude/Cursor before locking in API design
-3. **Spike: Slack Socket Mode** — validate slash command flow, app registration requirements, Socket Mode WebSocket lifecycle
-4. Implement data model migrations (all tables + FTS index)
-5. Implement OIDC auth middleware (Google OAuth first, then generalize to generic OIDC)
-6. Build REST API — all `/api/v1/` routes with role enforcement + optimistic locking
-7. Implement vote endpoint with DB-level transaction + row lock (P1 TODO)
-8. Build bootstrap/setup wizard (`/setup` route + bootstrap token)
-9. Implement Token management (SHA-256 hashing, MCP Bearer auth)
-10. Implement LingoDiscoveryJob (incremental, rate-limited, restartable)
-11. Implement LingoStalenessJob (weekly cron, owner DM, admin queue)
-12. Build web UI — search-first layout (React+Vite+Tailwind+shadcn) + slide-in detail panel + history timeline + relationships + staleness queue
-13. Build `lingo` CLI binary — `define`, `add`, `search`, `export` subcommands
-14. Docker-compose packaging + Helm chart
-15. Write 5-minute quickstart README
+## Project Structure
+
+```
+lingo/
+  src/
+    lingo/
+      __init__.py
+      main.py           # FastAPI app + lifespan (Slack handler, APScheduler, MCP mount)
+      config.py         # pydantic-settings Settings class (all env vars, validated on startup)
+      api/              # thin route handlers: validate input → call service → return schema
+        terms.py        # GET/POST/PUT/DELETE /api/v1/terms + term actions
+        users.py        # GET /api/v1/users, PATCH role
+        tokens.py       # token management
+        admin.py        # stats, jobs
+        export.py       # GET /api/v1/export
+        auth.py         # OIDC callback routes + /setup
+      models/           # SQLAlchemy ORM models (never returned directly from routes)
+        term.py
+        user.py
+        vote.py
+        token.py
+        job.py
+        term_history.py
+        term_relationship.py
+      schemas/          # Pydantic input/output schemas (serialization layer)
+        term.py
+        user.py
+        token.py
+        job.py
+      services/         # business logic (called by route handlers)
+        terms.py        # create_term, update_term, vote, promote, confirm_staleness, etc.
+        auth.py         # OIDC token validation, session management, bootstrap token
+        tokens.py       # SHA-256 hashing, token creation/revocation
+      jobs/             # APScheduler job functions
+        discovery.py    # LingoDiscoveryJob — Slack history scan
+        staleness.py    # LingoStalenessJob — weekly stale check + DMs
+      slack/            # slack-bolt AsyncApp + command handlers
+        app.py          # AsyncApp initialization (static SLACK_BOT_TOKEN, no InstallationStore)
+        commands.py     # /lingo define, add, vote, export handlers
+      mcp_server/       # FastMCP server
+        server.py       # get_term, search_terms, list_terms tools
+      cli/              # Typer CLI
+        main.py         # lingo define, add, search, export subcommands
+      db/
+        session.py      # async_sessionmaker + get_db Depends
+        engine.py       # create_async_engine (postgresql+asyncpg://)
+  alembic/
+    env.py              # run_sync bridge; asyncio.run() in standalone script only
+    versions/
+  tests/
+    conftest.py         # async test fixtures, test DB setup
+    api/
+    services/
+    jobs/
+    slack/
+    mcp_server/
+  pyproject.toml        # [project.scripts] lingo = "lingo.cli.main:app"
+  Dockerfile            # python:3.12-slim; CMD uvicorn lingo.main:app --workers 1
+  docker-compose.yml    # lingo + postgres services
+```
+
+1. Scaffold Python project — `uv init`, `pyproject.toml`, `src/lingo/` skeleton, Alembic config with `run_sync` bridge, all DB migrations (all tables including Job); docker-compose `command: sh -c 'alembic upgrade head && uvicorn lingo.main:app --host 0.0.0.0 --port 8000 --workers 1'`
+2. **Spike: MCP endpoint** — validate `mcp` Python SDK Streamable HTTP transport (NOT SSE — deprecated Mar 2025 spec). Use FastMCP's `streamable_http_app()` mounted on FastAPI via combined lifespan (workaround for python-sdk #1367). Tool schemas, Bearer token auth with Claude/Cursor.
+3. **Spike: Slack Socket Mode** — validate slash command flow with `slack-bolt`, app registration requirements, Socket Mode async lifecycle
+4. Implement OIDC auth middleware via Authlib (Google OAuth first, then generalize to generic OIDC)
+5. Build REST API — all `/api/v1/` routes with role enforcement + optimistic locking (SQLAlchemy 2.0 async)
+6. Implement vote endpoint with DB-level transaction + row lock (P1 TODO)
+7. Build bootstrap/setup wizard (`/setup` route + bootstrap token)
+8. Implement Token management (SHA-256 hashing, MCP Bearer auth)
+9. Implement LingoDiscoveryJob (incremental, rate-limited, restartable — APScheduler 3.x `AsyncIOScheduler`; **single Uvicorn worker required** — see scheduler note below)
+10. Implement LingoStalenessJob (weekly cron via APScheduler 3.x `AsyncIOScheduler`, owner DM, admin queue)
+11. Build web UI — search-first layout (React+Vite+Tailwind+shadcn) + slide-in detail panel + history timeline + relationships + staleness queue
+12. Build `lingo` CLI — Typer; `define`, `add`, `search`, `export` subcommands; ships as `lingo` entry point in pyproject.toml
+13. Docker-compose packaging + Helm chart
+14. Write 5-minute quickstart README
 
 ## GSTACK REVIEW REPORT
 
 | Review | Trigger | Why | Runs | Status | Findings |
 |--------|---------|-----|------|--------|----------|
 | CEO Review | `/plan-ceo-review` | Scope & strategy | 1 | CLEAR | 9 proposals, 8 accepted, 1 deferred; 0 critical gaps |
-| Codex Review | `/codex review` | Independent 2nd opinion | 1 | issues_found | bcrypt→SHA-256, build order resequenced, thresholds configurable, dev mode added, audit log as P2 TODO |
-| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | CLEAR | 14 issues resolved: stack, versioning, tokens, Socket Mode, CLI binary, FTS, bootstrap wizard, roles, UUIDs, vote PK, Token model, thresholds, SHA-256, build order. 4 critical test gaps. |
-| Design Review | `/plan-design-review` | UI/UX gaps | 1 | CLEAR | score: 2/10 → 9/10, 14 decisions made: search-first layout, slide-in detail, design system (Tailwind+shadcn, React+Vite, Berkeley Mono), interaction states (all surfaces), responsive+a11y, contributor feedback loop, status reversibility, filter logic, Slack modal add flow |
+| Outside Voice | `/plan-eng-review` outside voice | Independent 2nd opinion | 1 | issues_found | 10 findings: cursor granularity, Socket Mode recovery, vote lock deadlock, DEV_MODE guard, bootstrap TOCTOU, APScheduler MemoryJobStore, MCP token UX, staleness DM flood, workers enforcement, pg_trgm managed PG |
+| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 2 | CLEAR | Python migration: 17 issues resolved — MCP Streamable HTTP, APScheduler single-worker, Slack bolt stores, Alembic init container, SQLAlchemy session pattern, pg_trgm fuzzy, project structure, services/schemas layers, test infra, vote CAS (no SELECT FOR UPDATE), DEV_MODE guard, bootstrap TOCTOU, staleness rate limit, pg_trgm managed PG. 0 critical gaps. |
+| Design Review | `/plan-design-review` | UI/UX gaps | 1 | CLEAR | score: 2/10 → 9/10, 14 decisions made: search-first layout, slide-in detail, design system (Tailwind+shadcn, React+Vite, Berkeley Mono), interaction states (all surfaces), responsive+a11y |
 
-**CROSS-MODEL:** Design outside voice (Claude subagent) found 14 issues — all addressed. No unresolved tensions.
+**CROSS-MODEL:** Outside voice (Claude subagent) found 10 issues — all resolved or captured as P2 TODOs. Key finding: vote SELECT FOR UPDATE deadlock vector eliminated in favor of CAS pattern.
 **UNRESOLVED:** 0 unresolved decisions.
+**LANGUAGE MIGRATION (2026-03-26):** Stack switched from Go to Python 3.12 + FastAPI + SQLAlchemy 2.0 + uv. Go scaffolding deleted. This Eng Review covers the Python stack.
 **VERDICT:** CEO + ENG + DESIGN CLEARED — ready to implement.

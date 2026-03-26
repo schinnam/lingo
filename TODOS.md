@@ -7,7 +7,7 @@
 **Why:** Two concurrent votes can both pass the threshold check simultaneously, resulting in duplicate status transitions or a corrupted vote count.
 **Pros:** Prevents silent data corruption; trivial to implement at the right time.
 **Cons:** None — this is correctness, not an optimization.
-**Context:** The `POST /api/v1/terms/:id/vote` endpoint must use a Postgres transaction with `SELECT ... FOR UPDATE` on the Term row, then insert Vote (composite PK dedupes), then recount and conditionally update status. Must be accompanied by a goroutine concurrency test (TestVoteConcurrentAtThreshold) that fires 5 concurrent votes at threshold boundary and asserts exactly 1 transition fires. See test plan for full test spec.
+**Context:** The `POST /api/v1/terms/:id/vote` endpoint must use a transaction with: (1) INSERT vote row — composite PK raises IntegrityError for duplicate vote; (2) COUNT votes for the term; (3) conditional CAS UPDATE: `UPDATE terms SET status=$new, version=version+1 WHERE id=$id AND version=$current_version AND (SELECT COUNT(*) FROM votes WHERE term_id=$id) >= threshold`. **Do NOT use `SELECT FOR UPDATE` on the terms row** — this creates deadlock with optimistic locking on term edits. Must be accompanied by an async concurrency test (`test_vote_concurrent_at_threshold`) that fires 5 concurrent `asyncio` tasks at threshold boundary and asserts exactly 1 status transition fires. See test plan for full test spec.
 **Effort:** S → CC: S
 **Priority:** P1
 **Depends on:** Vote endpoint implementation
@@ -83,6 +83,90 @@
 **Effort:** M → CC: ~15 min
 **Priority:** P2
 **Depends on:** Slack Socket Mode implementation, LingoStalenessJob
+
+---
+
+## P2
+
+### K8s multi-replica job locking
+**What:** Implement Postgres advisory lock (`pg_try_advisory_lock`) at the start of LingoDiscoveryJob and LingoStalenessJob to ensure only 1 replica fires each job in multi-replica Kubernetes deployments.
+**Why:** APScheduler `--workers 1` prevents duplicates in docker-compose, but K8s with `replicaCount > 1` will fire jobs once per pod — resulting in duplicate Slack DMs to term owners.
+**Pros:** Safe horizontal scaling without Redis; ~20 lines per job; `pg_try_advisory_lock` is always available in Postgres.
+**Cons:** Advisory locks don't survive Postgres restarts (fine since jobs are periodic and will re-acquire on next schedule tick).
+**Context:** v1 is docker-compose-first with the `--workers 1` constraint documented in Resolved Design Decisions #8. This is a v2 item for enterprise K8s users who need >1 replica. Pattern: `SELECT pg_try_advisory_lock(hashtext('lingo_discovery_job'))` at job start, `pg_advisory_unlock(...)` at end. If lock not acquired, skip execution.
+**Effort:** S → CC: ~15 min
+**Priority:** P2
+**Depends on:** Job implementation
+
+---
+
+## P2
+
+### Dependency version audit (pre-release)
+**What:** Before cutting v1.0: pin major versions of key dependencies, run `uv lock --upgrade`, check security advisories, verify license compatibility.
+**Why:** Several stack dependencies were chosen based on 2025-2026 best practices and may have unstable APIs: `fastmcp` (new library), `apscheduler` (must pin `>=3.10,<4.0` — v4.0 is beta), `mcp` (pin `>=1.6` for Streamable HTTP). Unpinned deps in Docker images cause production breakage on self-hosted tools.
+**Pros:** Prevents "it worked in dev, broke in prod" for Docker image users; catches upstream security advisories before release.
+**Cons:** Time-sensitive (dependencies change). Do as last step before tagging v1.0.
+**Context:** `uv.lock` pins transitive deps, but `pyproject.toml` version constraints need explicit major-version pins. Minimum: `apscheduler>=3.10,<4.0`, `mcp>=1.6,<2.0`, `authlib>=1.3`, `fastmcp>=0.1`. Also run `pip-audit` or `uv run pip-audit` for CVEs.
+**Effort:** S → CC: ~10 min
+**Priority:** P2
+**Depends on:** All feature implementation
+
+---
+
+## P2
+
+### LingoDiscoveryJob message-level cursor checkpointing
+**What:** Change `progress_json` cursor to track both `channel_id` AND `message_cursor` (Slack's `next_cursor` pagination token within a channel), not just channel index.
+**Why:** Current channel-level cursor means a crash mid-channel causes the entire channel to be re-scanned, potentially creating duplicate `suggested` terms for the same acronyms. The deduplication logic (update `occurrences_count` if name exists) mitigates this but the DB is still hit redundantly.
+**Pros:** True resumability; no re-scanning on restart; no duplicate DB writes.
+**Cons:** progress_json schema becomes more complex (dict of channel_id → message_cursor instead of a channel index integer).
+**Context:** `progress_json` format change: `{"channels_done": N, "channels_total": N, "current_channel_cursor": "abc123"}` → `{"channels_done": N, "channels_total": N, "channel_cursors": {"C0123": "xyz789", ...}}`. The job must checkpoint every N messages (suggest N=100 to limit re-scan on restart).
+**Effort:** S → CC: ~15 min
+**Priority:** P2
+**Depends on:** LingoDiscoveryJob implementation
+
+---
+
+## P2
+
+### Socket Mode event recovery across restart window
+**What:** Document and implement a recovery strategy for the ~30s Slack event queue window during process restart (deploy, crash, OOM).
+**Why:** When the Uvicorn process restarts, Slack queues events for ~30 seconds before dropping them. `/lingo define` commands sent during a deploy are silently lost. The `asyncio.shield` pattern only prevents mid-handler cancellation, not event loss during reconnect.
+**Pros:** Users don't silently get no response to Slack commands during deployments.
+**Cons:** Full recovery requires at-least-once delivery semantics (idempotent handlers) which adds complexity.
+**Context:** Two pragmatic options: (1) Accept the 30s window as documented behavior; note it in the operator guide as "commands sent during deployment may be lost"; (2) Implement idempotent handlers that check `event_id` against a Redis/DB dedup set and silently skip already-processed events. Option 1 is v1. Option 2 is v2.
+**Effort:** M → CC: ~20 min
+**Priority:** P2
+**Depends on:** Slack Socket Mode implementation
+
+---
+
+## P2
+
+### APScheduler SQLAlchemy job store for crash-resilient discovery
+**What:** Configure APScheduler to use `SQLAlchemyJobStore` (Postgres) instead of the default `MemoryJobStore`, so job schedules survive process restarts.
+**Why:** With `MemoryJobStore`, a process restart during `LingoDiscoveryJob` loses the scheduler state. The DB `Job.progress_json` cursor is only useful if the job itself checkpoints it periodically — but the scheduler doesn't know to resume an interrupted job.
+**Pros:** Surviving restarts is especially valuable for LingoDiscoveryJob (can take minutes on large workspaces). `SQLAlchemyJobStore` uses the existing Postgres connection.
+**Cons:** APScheduler's SQLAlchemy job store uses a separate sync SQLAlchemy engine (not the async one). Requires a separate sync engine for the job store. Adds ~10 lines of config.
+**Context:** `SQLAlchemyJobStore(url=DATABASE_URL_SYNC)` — note: must use `postgresql://` (sync) not `postgresql+asyncpg://` for this specific integration. The async app engine and the APScheduler job store engine are separate.
+**Effort:** S → CC: ~15 min
+**Priority:** P2
+**Depends on:** APScheduler implementation
+
+---
+
+## P2
+
+### Startup assertion: single-worker enforcement
+**What:** Add a startup check that warns (or errors) if the app detects it's running in a multi-worker context with the scheduler enabled.
+**Why:** `--workers 1` is documented but not enforced. An operator who bumps workers for a traffic spike unknowingly creates duplicate scheduled jobs (duplicate Slack DMs, duplicate discovery runs).
+**Pros:** Prevents silent duplicate behavior. Self-documenting constraint.
+**Cons:** Detecting worker count from inside the process is not directly supported by Uvicorn's API. Workaround: check for a `LINGO_SCHEDULER_ENABLED` env var that defaults to `true`; set `LINGO_SCHEDULER_ENABLED=false` on worker processes beyond the first (requires a custom Uvicorn worker class or wrapper script).
+**Context:** Simplest implementation: document `LINGO_SCHEDULER_ENABLED=false` as an env var for multi-worker deployments. A more robust solution involves a startup check via a Redis/Postgres lock: `pg_try_advisory_lock('lingo_scheduler')` — if the lock fails (another process holds it), log WARNING and skip scheduler start.
+**Effort:** S → CC: ~15 min
+**Priority:** P2
+**Depends on:** APScheduler implementation
 
 ---
 
