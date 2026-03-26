@@ -23,7 +23,7 @@ function AppInner() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [addModalOpen, setAddModalOpen] = useState(false)
 
-  const { data, isLoading } = useTerms({ q: search, status: statusFilter })
+  const { data, isLoading, isError } = useTerms({ q: search, status: statusFilter })
   const { data: detail } = useTermDetail(selectedId)
   const addTerm = useAddTerm()
   const voteTerm = useVoteTerm()
@@ -90,6 +90,10 @@ function AppInner() {
           {isLoading ? (
             <div className="flex items-center justify-center py-16 text-gray-400 text-sm">
               Loading…
+            </div>
+          ) : isError ? (
+            <div className="flex items-center justify-center py-16 text-red-400 text-sm">
+              Could not load terms. Check your connection and try again.
             </div>
           ) : terms.length === 0 ? (
             <div className="flex items-center justify-center py-16 text-gray-400 text-sm">
