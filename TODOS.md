@@ -83,6 +83,7 @@
 **Effort:** M → CC: ~15 min
 **Priority:** P2
 **Depends on:** Slack Socket Mode implementation, LingoStalenessJob
+**Completed:** v0.2.0 (2026-03-26) — staleness DM uses Block Kit with Confirm/Update buttons; dispute and promotion use plain text (no interactive actions needed)
 
 ---
 

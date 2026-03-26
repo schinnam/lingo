@@ -70,14 +70,14 @@
 
 | Feature | Status | Notes |
 |---|---|---|
-| slack-bolt AsyncApp (Socket Mode) setup | ⬜ Not Started | |
-| `/lingo define <term>` | ⬜ Not Started | |
-| `/lingo add <term> <definition>` | ⬜ Not Started | |
-| `/lingo vote <term>` | ⬜ Not Started | |
-| `/lingo export` | ⬜ Not Started | File upload |
-| Dispute DM to term owner | ⬜ Not Started | |
-| Promotion notification to source channel | ⬜ Not Started | |
-| Staleness DM to owner (with Confirm/Update buttons) | ⬜ Not Started | |
+| slack-bolt AsyncApp (Socket Mode) setup | ✅ Done | `lingo/slack/app.py`; Socket Mode via `AsyncSocketModeHandler` |
+| `/lingo define <term>` | ✅ Done | Case-insensitive lookup |
+| `/lingo add <term> <definition>` | ✅ Done | Dedup check; anonymous if Slack user unknown |
+| `/lingo vote <term>` | ✅ Done | Dedup guard via VoteService |
+| `/lingo export` | ✅ Done | `files_upload_v2` Markdown export |
+| Dispute DM to term owner | ✅ Done | `send_dispute_dm`; no-op if no owner |
+| Promotion notification to source channel | ✅ Done | `send_promotion_notification`; no-op if no source channel |
+| Staleness DM to owner (with Confirm/Update buttons) | ✅ Done | Interactive blocks; confirm resets `is_stale` |
 
 ---
 
@@ -146,10 +146,11 @@
 | Unit: API routes | 59 | ✅ Passing |
 | Unit: Auth Phase 2 | 14 | ✅ Passing |
 | Unit: MCP Phase 3 | 21 | ✅ Passing |
+| Unit: Slack Phase 4 | 17 | ✅ Passing |
 | Integration: Postgres (real DB) | 0 | ⬜ Not Started |
 | Concurrency: vote race condition | 0 | ⬜ Not Started (P1) |
 
-**Total: 148 / 148 passing**
+**Total: 165 / 165 passing**
 
 ---
 
