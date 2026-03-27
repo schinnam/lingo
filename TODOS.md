@@ -1,5 +1,111 @@
 # Lingo — TODOS
 
+## P0 — Adversarial Review: Phase 7 Web UI (2026-03-26)
+
+### #1 API shape mismatch — term list always empty in production
+**File:** `frontend/src/api/terms.ts:14`, `src/lingo/api/routes/terms.py:73`
+**Impact:** Frontend expects `{ items, total, offset, limit }` but backend returns bare `Term[]`. `data?.items` is always `undefined`. Term list shows empty on every page load — silent production outage.
+**Fix:** Add `TermsListResponse` schema to backend and return it, OR change frontend types to expect `Term[]` directly.
+**Priority:** P0
+
+---
+
+### #12 X-User-Id header — unconditional auth bypass
+**File:** `src/lingo/api/deps.py:107-118`
+**Impact:** Any caller who knows a valid UUID can impersonate any user in production. `owner_id` is returned in every `TermResponse`. No `settings.dev_mode` gate.
+**Fix:** Gate the `X-User-Id` bypass behind `if settings.dev_mode:`.
+**Priority:** P0
+
+---
+
+### #3 TypeError in TermDetail — relationships always undefined
+**File:** `frontend/src/components/TermDetail.tsx:47`
+**Impact:** `term.relationships.length` throws TypeError — backend doesn't include `relationships` in `TermResponse`. Detail panel crashes on every open.
+**Fix:** Guard with `term.relationships ?? []` OR add `relationships` field to the backend `TermDetail` endpoint.
+**Priority:** P0
+
+---
+
+### #6 Form state never resets on modal cancel
+**File:** `frontend/src/components/AddTermModal.tsx:43-48`
+**Impact:** Open modal, fill fields, click Cancel — stale values + validation errors reappear on next open.
+**Fix:** Call `resetForm()` in the Cancel handler.
+**Priority:** P1
+
+---
+
+### #2 Status filter counts wrong under pagination
+**File:** `frontend/src/App.tsx:34-40`
+**Impact:** Per-status counts computed only over current page (≤100). Shows "Official (0)" when 400 exist on later pages.
+**Fix:** Fetch per-status counts from backend or use separate count queries.
+**Priority:** P1
+
+---
+
+### #10 Alembic downgrade leaves orphan enum types
+**File:** `alembic/versions/2277c37b0174_initial_schema.py:118-127`
+**Impact:** Re-running upgrade after downgrade fails with `ERROR: type "jobtype" already exists`.
+**Fix:** Add `op.execute("DROP TYPE IF EXISTS jobtype, jobstatus, relationshiptype")` in `downgrade()`.
+**Priority:** P1
+
+---
+
+### #4 Dispute endpoint is a silent no-op
+**File:** `src/lingo/api/routes/terms.py:164-177`
+**Impact:** `POST /terms/{id}/dispute` sets no flag, sends no notification. User action silently discarded.
+**Fix:** Implement dispute tracking. At minimum, add UI feedback ("dispute recorded").
+**Priority:** P2
+
+---
+
+### #5 voteTerm return type mismatch
+**File:** `frontend/src/api/terms.ts:28`
+**Impact:** Typed as `Promise<Term>` but backend returns `{ vote_count, transition }`. Silent type lie.
+**Fix:** Align types — add `VoteResponse` frontend type.
+**Priority:** P2
+
+---
+
+### #7 Double-submit race in AddTermModal
+**File:** `frontend/src/components/AddTermModal.tsx:40`
+**Impact:** Fast double-click fires two POST requests before re-render sets `submitting=true`.
+**Fix:** Use `addTerm.isPending` (synchronous) instead of `submitting` state.
+**Priority:** P2
+
+---
+
+### #8 index.html read from disk on every request
+**File:** `src/lingo/main.py:74`
+**Impact:** Under load, disk read per page load degrades performance.
+**Fix:** Cache `index.read_text()` at startup.
+**Priority:** P2
+
+---
+
+### #9 Dev mode meta injection fragile
+**File:** `src/lingo/main.py:76-78`
+**Impact:** If `</head>` appears elsewhere or as `</HEAD>`, injection silently fails or fires twice.
+**Fix:** Use a placeholder comment in `index.html` to target injection.
+**Priority:** P2
+
+---
+
+### #11 Nullable auth columns in tokens table
+**File:** `alembic/versions/2277c37b0174_initial_schema.py:163-174`
+**Impact:** `user_id` and `token_hash` nullable — orphaned tokens can exist with no DB constraint.
+**Fix:** Add `nullable=False` to `token_hash` and `user_id`.
+**Priority:** P2
+
+---
+
+### #13 Keyboard shortcut guard misses contenteditable/select
+**File:** `frontend/src/App.tsx:44-47`
+**Impact:** Pressing `/` in a rich text editor focuses the search bar.
+**Fix:** Add `isContentEditable` and `SELECT` checks to the `isInput` guard.
+**Priority:** P2
+
+---
+
 ## P1
 
 ### Transactional vote + status transition

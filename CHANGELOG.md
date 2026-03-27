@@ -3,6 +3,31 @@
 All notable changes to Lingo are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.5.0] - 2026-03-26
+
+### Added
+- React + Vite + Tailwind v4 SPA frontend (`frontend/`) compiled into `src/lingo/static/`
+- `SearchBar` component with live search; keyboard shortcut `/` and `Cmd+K` focus the search bar
+- `StatusFilter` component with filter pills (All / Official / Community / Pending / Suggested) and live per-status counts
+- `TermRow` table rows for the term list; sorted by status (Official first)
+- `TermDetail` slide-in panel with relationships, vote count, and vote / dispute action buttons
+- `AddTermModal` with name, full name, definition, category fields; client-side validation (name and definition required)
+- `DevModeBanner` component — reads `<meta name="lingo-dev-mode">` injected by FastAPI when `LINGO_DEV_MODE=true`
+- React Query hooks (`useTerms`, `useTermDetail`, `useAddTerm`, `useVoteTerm`, `useDisputeTerm`) in `frontend/src/hooks/useTerms.ts`
+- Axios-based API client in `frontend/src/api/terms.ts`
+- FastAPI SPA fallback route: `/{full_path:path}` serves `index.html` for all unmatched paths so React Router works correctly
+- Dev mode meta tag injection: `<meta name="lingo-dev-mode">` inserted into `index.html` at request time when `LINGO_DEV_MODE=true`
+- 47 Vitest + React Testing Library tests covering all 7 components and the API layer
+- 7 pytest tests covering SPA static file serving, health endpoint, and API route priority
+
+### Fixed
+- API error state: when backend is unavailable, the UI now shows "Could not load terms. Check your connection and try again." instead of the misleading "No terms found."
+- Alembic migration template (`alembic/script.py.mako`) was missing from the repo, preventing `alembic revision` from running; added the standard template
+- Initial database schema migration (`2277c37b0174_initial_schema`) — creates all 7 tables: `users`, `terms`, `tokens`, `jobs`, `term_history`, `term_relationships`, `votes`
+
+### Changed
+- `.gitignore` now excludes `.gstack/` directory (QA reports, browser session artifacts)
+
 ## [0.4.0] - 2026-03-26
 
 ### Added

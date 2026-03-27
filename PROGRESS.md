@@ -10,7 +10,7 @@
 |---|---|---|
 | Project scaffold (uv, pyproject.toml, dir structure) | ✅ Done | |
 | SQLAlchemy models (Term, User, Vote, Token, History, Job) | ✅ Done | |
-| Alembic async migration setup | ✅ Done | Needs first migration generated |
+| Alembic async migration setup | ✅ Done | |
 | DB session + async engine | ✅ Done | |
 | TermService — CRUD + optimistic locking | ✅ Done | |
 | VoteService — dedup + auto status transitions | ✅ Done | |
@@ -108,18 +108,18 @@
 
 | Feature | Status | Notes |
 |---|---|---|
-| React + Vite project setup | ⬜ Not Started | Compiled to `src/lingo/static/` |
-| Tailwind CSS + shadcn/ui | ⬜ Not Started | |
-| Search bar (reactive, full-width) | ⬜ Not Started | |
-| Status/category filter pills | ⬜ Not Started | |
-| Term list (sorted: Official → Community → Pending) | ⬜ Not Started | |
-| Term detail slide-in panel | ⬜ Not Started | |
-| Add term modal | ⬜ Not Started | |
-| Vote + dispute buttons | ⬜ Not Started | |
-| Editor queue (Suggested badge) | ⬜ Not Started | |
-| Admin panel (users, roles, jobs) | ⬜ Not Started | |
-| Dev mode warning banner | ⬜ Not Started | |
-| FastAPI static file serving | ⬜ Not Started | |
+| React + Vite project setup | ✅ Done | `frontend/`; Vitest + RTL test suite |
+| Tailwind CSS + shadcn/ui | ✅ Done | Tailwind v4 via `@tailwindcss/vite` |
+| Search bar (reactive, full-width) | ✅ Done | `SearchBar` component; `/` + `Cmd+K` shortcut |
+| Status/category filter pills | ✅ Done | `StatusFilter` component with live counts |
+| Term list (sorted: Official → Community → Pending) | ✅ Done | `TermRow` table rows; no cards |
+| Term detail slide-in panel | ✅ Done | `TermDetail` dialog; relationships, vote/dispute |
+| Add term modal | ✅ Done | `AddTermModal` with validation |
+| Vote + dispute buttons | ✅ Done | In `TermDetail`; wired to React Query mutations |
+| Editor queue (Suggested badge) | ✅ Done | StatusFilter shows live count per status |
+| Admin panel (users, roles, jobs) | ⬜ Not Started | Deferred — editor/admin routes TBD |
+| Dev mode warning banner | ✅ Done | `DevModeBanner` — reads `<meta name="lingo-dev-mode">` |
+| FastAPI static file serving | ✅ Done | SPA fallback route; build → `src/lingo/static/` |
 
 ---
 
@@ -129,7 +129,7 @@
 |---|---|---|
 | Dockerfile | ✅ Done | `python:3.12-slim` + uv |
 | docker-compose (lingo + postgres) | ✅ Done | |
-| Alembic first migration (initial schema) | ⬜ Not Started | `uv run alembic revision --autogenerate` |
+| Alembic first migration (initial schema) | ✅ Done | `2277c37b0174_initial_schema` — all 7 tables |
 | Helm chart (Kubernetes) | ⬜ Not Started | |
 | pg_trgm extension migration | ⬜ Not Started | Fuzzy search / "did you mean?" |
 | GIN index on `search_vector` | ⬜ Not Started | |
@@ -149,10 +149,12 @@
 | Unit: Slack Phase 4 | 17 | ✅ Passing |
 | Unit: Scheduler Phase 5 | 17 | ✅ Passing |
 | Unit: CLI Phase 6 | 16 | ✅ Passing |
+| Unit: Web UI Phase 7 (Python) | 7 | ✅ Passing |
+| Frontend: Web UI Phase 7 (Vitest) | 47 | ✅ Passing |
 | Integration: Postgres (real DB) | 0 | ⬜ Not Started |
 | Concurrency: vote race condition | 0 | ⬜ Not Started (P1) |
 
-**Total: 198 / 198 passing**
+**Total: 252 / 252 passing (205 pytest + 47 Vitest)**
 
 ---
 

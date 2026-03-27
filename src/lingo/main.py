@@ -1,7 +1,10 @@
 """FastAPI application entry point."""
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 
 from lingo.api.routes import terms
 from lingo.api.routes import export, users, tokens, admin
@@ -57,3 +60,21 @@ app.include_router(admin.router)
 
 # MCP endpoint — bearer token auth required
 app.mount("/mcp", MCPBearerAuthMiddleware(_mcp_asgi))
+
+# SPA static files — served last so API routes take priority
+_static_dir = Path(__file__).parent / "static"
+if _static_dir.exists() and any(_static_dir.iterdir()):
+    app.mount("/assets", StaticFiles(directory=_static_dir / "assets"), name="assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def spa_fallback(full_path: str):  # noqa: ARG001
+        index = _static_dir / "index.html"
+        if not index.exists():
+            return {"detail": "Frontend not built. Run `npm run build` in the frontend/ directory."}
+        html = index.read_text()
+        if settings.dev_mode:
+            html = html.replace(
+                "</head>",
+                '<meta name="lingo-dev-mode" content="true"></head>',
+            )
+        return HTMLResponse(content=html)
