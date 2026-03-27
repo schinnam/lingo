@@ -328,6 +328,7 @@ class TestOIDCJWTAuth:
 
     async def test_invalid_signature_jwt_returns_401(self, client):
         """A JWT signed with a different key must return 401."""
+        import warnings
         import jwt as pyjwt
         import time
 
@@ -339,7 +340,9 @@ class TestOIDCJWTAuth:
             "iat": int(time.time()),
             "exp": int(time.time()) + 3600,
         }
-        evil_token = pyjwt.encode(payload, "wrong-secret", algorithm="HS256")
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message=".*HMAC key.*below.*minimum.*")
+            evil_token = pyjwt.encode(payload, "wrong-secret", algorithm="HS256")
         resp = await client.get(
             _AUTHED_READ,
             headers={"Authorization": f"Bearer {evil_token}"},
@@ -358,7 +361,8 @@ class TestOIDCJWTAuth:
             "iat": int(time.time()),
             "exp": int(time.time()) + 3600,
         }
-        token = pyjwt.encode(payload, settings.secret_key, algorithm="HS256")
+        from lingo.auth.oidc import _derive_signing_key
+        token = pyjwt.encode(payload, _derive_signing_key(settings.secret_key), algorithm="HS256")
         resp = await client.get(
             _AUTHED_READ,
             headers={"Authorization": f"Bearer {token}"},
