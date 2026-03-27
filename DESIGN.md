@@ -216,6 +216,7 @@ All REST routes are prefixed `/api/v1/`. The MCP endpoint follows the MCP spec a
 ```
 -- Terms
 GET    /api/v1/terms                           — list/search (?q=, ?status=, ?category=)
+                                                 returns { items, total, offset, limit, counts_by_status } envelope
 POST   /api/v1/terms                           — add a term (member+)
 GET    /api/v1/terms/:id                       — get term (includes relationships[], linked_terms[])
 PUT    /api/v1/terms/:id                       — update term; requires `version` field (optimistic lock);
@@ -596,7 +597,7 @@ Exported to glossary.md
 Configuration (environment variables):
 - `LINGO_APP_URL` — base URL of the Lingo server (default: `http://localhost:8000`)
 - `LINGO_API_TOKEN` — Bearer token for authentication (optional in dev mode)
-- `LINGO_DEV_USER_ID` — dev mode user ID header (`X-User-Id`) when `LINGO_API_TOKEN` is unset
+- `LINGO_DEV_USER_ID` — dev mode user ID header (`X-User-Id`) when `LINGO_API_TOKEN` is unset; **only accepted when `LINGO_DEV_MODE=true`** (security: header is ignored in production)
 
 ### First-Run Setup Wizard States
 
