@@ -31,12 +31,13 @@ function AppInner() {
 
   const terms = data?.items ?? []
 
+  const statusCounts = data?.counts_by_status ?? {}
   const counts = {
     all: data?.total ?? 0,
-    official: terms.filter((t) => t.status === 'official').length,
-    community: terms.filter((t) => t.status === 'community').length,
-    pending: terms.filter((t) => t.status === 'pending').length,
-    suggested: terms.filter((t) => t.status === 'suggested').length,
+    official: statusCounts['official'] ?? 0,
+    community: statusCounts['community'] ?? 0,
+    pending: statusCounts['pending'] ?? 0,
+    suggested: statusCounts['suggested'] ?? 0,
   }
 
   useEffect(() => {
@@ -139,6 +140,7 @@ function AppInner() {
         isOpen={addModalOpen}
         onClose={() => setAddModalOpen(false)}
         onSubmit={handleAddTerm}
+        isPending={addTerm.isPending}
       />
     </div>
   )

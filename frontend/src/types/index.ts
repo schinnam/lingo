@@ -29,6 +29,12 @@ export interface TermsResponse {
   total: number
   offset: number
   limit: number
+  counts_by_status: Record<string, number>
+}
+
+export interface VoteResponse {
+  vote_count: number
+  transition: string | null
 }
 
 export interface CreateTermPayload {

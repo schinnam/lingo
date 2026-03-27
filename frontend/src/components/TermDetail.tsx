@@ -44,11 +44,11 @@ export function TermDetail({ term, onClose, onVote, onDispute }: TermDetailProps
         <p className="text-xs text-gray-500 mb-2">Owner: <span>@{term.owner.display_name}</span></p>
       )}
 
-      {term.relationships.length > 0 && (
+      {(term.relationships ?? []).length > 0 && (
         <div className="mb-4">
           <p className="text-xs font-medium text-gray-500 uppercase mb-1">Related Terms</p>
           <ul className="space-y-1">
-            {term.relationships.map((rel) => (
+            {(term.relationships ?? []).map((rel) => (
               <li key={rel.id} className="text-sm">
                 <span className="font-mono font-bold text-gray-800">{rel.related_term.name}</span>
                 <span className="text-gray-400 ml-1 text-xs">({rel.relationship_type})</span>

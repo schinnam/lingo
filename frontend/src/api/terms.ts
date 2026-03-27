@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { Term, TermDetail, TermsResponse, CreateTermPayload } from '../types'
+import type { Term, TermDetail, TermsResponse, VoteResponse, CreateTermPayload } from '../types'
 
 export async function fetchTerms(params: {
   q?: string
@@ -25,8 +25,8 @@ export async function addTerm(payload: CreateTermPayload): Promise<Term> {
   return res.data
 }
 
-export async function voteTerm(id: string): Promise<Term> {
-  const res = await axios.post<Term>(`/api/v1/terms/${id}/vote`)
+export async function voteTerm(id: string): Promise<VoteResponse> {
+  const res = await axios.post<VoteResponse>(`/api/v1/terms/${id}/vote`)
   return res.data
 }
 
