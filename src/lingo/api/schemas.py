@@ -40,6 +40,14 @@ class TermResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class TermsListResponse(BaseModel):
+    items: list[TermResponse]
+    total: int
+    offset: int
+    limit: int
+    counts_by_status: dict[str, int] = Field(default_factory=dict)
+
+
 # ---------------------------------------------------------------------------
 # Vote schemas
 # ---------------------------------------------------------------------------
