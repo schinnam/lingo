@@ -147,6 +147,7 @@
 **Effort:** S → CC: S
 **Priority:** P1
 **Depends on:** Vote endpoint implementation
+**Completed:** v0.5.2 (2026-03-26) — Implemented CAS `UPDATE terms SET status=?, version=version+1 WHERE id=? AND status=? AND version=?`. Added `test_vote_concurrent_at_threshold` using `asyncio.gather` with two sessions racing at threshold.
 
 ---
 
