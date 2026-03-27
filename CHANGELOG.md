@@ -3,6 +3,25 @@
 All notable changes to Lingo are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.5.1] - 2026-03-26
+
+### Fixed
+- **API shape mismatch (P0):** `GET /api/v1/terms` now returns `{ items, total, offset, limit, counts_by_status }` envelope instead of a bare array — term list was always empty in production
+- **Auth bypass (P0):** `X-User-Id` header now gated behind `settings.dev_mode`; rejected with 401 in production, preventing any caller from impersonating users via UUID
+- **TermDetail crash (P0):** `term.relationships` guarded with `?? []` — accessing `.length` on the missing field was crashing the detail panel on every open
+- **Form state on cancel (P1):** AddTermModal Cancel button now resets all fields and validation errors before closing
+- **Status filter counts (P1):** Backend returns `counts_by_status` in the list response — per-status counts now reflect all terms across all pages, not just the current page
+- **Alembic downgrade (P1):** `downgrade()` now drops `jobtype`, `jobstatus`, and `relationshiptype` enum types, preventing "type already exists" error on re-upgrade
+- **Double-submit race (P2):** AddTermModal submit button now uses `isPending` from TanStack Query mutation (synchronous) instead of local `submitting` state, preventing duplicate POST on fast double-click
+- **voteTerm type lie (P2):** `voteTerm` in `terms.ts` now correctly typed as `Promise<VoteResponse>` matching the backend's actual `{ vote_count, transition }` response
+- **counts_by_status key safety:** Status keys in `counts_by_status` explicitly cast to `str` to guard against asyncpg returning non-string enum labels
+
+### Added
+- `TermsListResponse` Pydantic schema with `items`, `total`, `offset`, `limit`, and `counts_by_status` fields
+- `VoteResponse` TypeScript type in `frontend/src/types/index.ts`
+- Test: `test_list_terms_counts_by_status` — verifies `counts_by_status` is present and reflects all terms
+- Test: `test_x_user_id_rejected_when_dev_mode_off` — regression guard for the auth bypass security fix
+
 ## [0.5.0] - 2026-03-26
 
 ### Added
