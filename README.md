@@ -180,8 +180,24 @@ Available tools: `get_term`, `search_terms`, `list_terms`.
 
 ## Running tests
 
+Unit tests (no Docker required):
+
 ```bash
-uv run pytest
+uv run pytest tests/unit/
+# or
+make test-unit
+```
+
+Integration tests (requires Docker — hits a real Postgres container):
+
+```bash
+make test-integration   # starts postgres, creates lingo_test DB, runs migrations, runs tests
+```
+
+All tests:
+
+```bash
+make test
 ```
 
 Frontend tests:
