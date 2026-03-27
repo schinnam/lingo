@@ -15,6 +15,11 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+# Override sqlalchemy.url from app settings so LINGO_DATABASE_URL is respected
+# (alembic.ini hardcodes localhost; in Docker the host is the service name)
+from lingo.config import settings  # noqa: E402
+config.set_main_option("sqlalchemy.url", settings.database_url)
+
 target_metadata = Base.metadata
 
 
