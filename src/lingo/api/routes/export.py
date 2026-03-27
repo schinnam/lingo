@@ -3,7 +3,7 @@ from fastapi import APIRouter, Query
 from fastapi.responses import Response
 from sqlalchemy import select
 
-from lingo.api.deps import SessionDep
+from lingo.api.deps import CurrentUser, SessionDep
 from lingo.models.term import Term
 
 router = APIRouter(prefix="/api/v1", tags=["export"])
@@ -12,6 +12,7 @@ router = APIRouter(prefix="/api/v1", tags=["export"])
 @router.get("/export")
 async def export_terms(
     session: SessionDep,
+    current_user: CurrentUser,
     status: str = Query("official"),
     format: str = Query("markdown"),
     limit: int = Query(100, le=500),

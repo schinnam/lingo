@@ -225,6 +225,19 @@ class TestDeleteTermAPI:
         assert get.status_code == 404
 
 
+class TestExportAPI:
+    async def test_export_without_auth_returns_401(self, client):
+        response = await client.get("/api/v1/export")
+        assert response.status_code == 401
+
+    async def test_export_with_auth_returns_200(self, client):
+        response = await client.get(
+            "/api/v1/export",
+            headers={"X-User-Id": client._admin_id},
+        )
+        assert response.status_code == 200
+
+
 class TestVoteAPI:
     async def test_vote_on_term(self, client):
         create = await client.post(
