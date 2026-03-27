@@ -3,6 +3,12 @@
 All notable changes to Lingo are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.5.2] - 2026-03-26
+
+### Fixed
+- **Concurrent vote race condition (P1):** Vote insert, count, and status transition now use a CAS `UPDATE ... WHERE status=<expected> AND version=<seen>` — two concurrent requests both hitting the threshold now result in exactly one status transition instead of both firing
+- **Concurrency test:** Added `test_vote_concurrent_at_threshold` — spawns two async sessions via `asyncio.gather` and asserts exactly one `to_community` transition fires
+
 ## [0.5.1] - 2026-03-26
 
 ### Fixed
