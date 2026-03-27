@@ -71,7 +71,7 @@ def define(
             err_console.print(f"API error: {exc.response.status_code}")
             raise typer.Exit(1)
 
-    terms = resp.json()
+    terms = resp.json().get("items", [])
     # Prefer exact case-insensitive match; fall back to first fuzzy result
     exact = [t for t in terms if t["name"].lower() == term.lower()]
     match = exact[0] if exact else (terms[0] if terms else None)
@@ -164,7 +164,7 @@ def list_terms(
             err_console.print(f"API error: {exc.response.status_code}")
             raise typer.Exit(1)
 
-    terms = resp.json()
+    terms = resp.json().get("items", [])
 
     if not terms:
         console.print("No terms found.")
