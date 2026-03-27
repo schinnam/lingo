@@ -3,6 +3,13 @@
 All notable changes to Lingo are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.5.4] - 2026-03-26
+
+### Added
+- **Integration test infrastructure:** `tests/integration/conftest.py` with real Postgres fixtures — runs alembic migrations once per session, NullPool engine per test, TRUNCATE for isolation between tests, lifespan override to skip scheduler/MCP, and safe `dependency_overrides` teardown
+- **Integration tests for terms API:** `tests/integration/test_terms.py` covers `POST /api/v1/terms` (201, field validation, auth required) and `GET /api/v1/terms` (200, correct shape, created terms appear)
+- **Makefile:** `make test`, `make test-unit`, `make test-integration`, `make db-up`, `make db-down` — `make test-integration` auto-starts postgres and creates `lingo_test` database
+
 ## [0.5.3] - 2026-03-26
 
 ### Added

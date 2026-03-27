@@ -92,7 +92,9 @@ frontend/                # React + Vite SPA (compiled → src/lingo/static/)
 └── test/                # Vitest + React Testing Library
 
 alembic/                 # Database migrations
-tests/                   # pytest (async, aiosqlite in-memory DB)
+tests/
+├── unit/                # pytest (async, aiosqlite in-memory DB — no Docker)
+└── integration/         # pytest (async, real Postgres — requires Docker)
 ```
 
 ---
