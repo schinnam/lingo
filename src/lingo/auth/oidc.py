@@ -12,6 +12,7 @@ Production flow:
 For simplicity in v1, we validate JWTs signed with `settings.secret_key` (HS256).
 Real OIDC integration (RS256 + JWKS URL) can be wired in later via Authlib.
 """
+import hashlib
 import time
 from typing import Optional
 
@@ -19,6 +20,11 @@ import jwt as pyjwt
 from jwt.exceptions import ExpiredSignatureError, InvalidSignatureError, DecodeError
 
 from lingo.config import settings
+
+
+def _derive_signing_key(secret: str) -> bytes:
+    """Derive a 32-byte key from the secret to satisfy HMAC-SHA256 minimum length (RFC 7518 §3.2)."""
+    return hashlib.sha256(secret.encode()).digest()
 
 
 def verify_jwt(token: str) -> Optional[dict]:
@@ -30,7 +36,7 @@ def verify_jwt(token: str) -> Optional[dict]:
     try:
         payload = pyjwt.decode(
             token,
-            settings.secret_key,
+            _derive_signing_key(settings.secret_key),
             algorithms=["HS256"],
             options={"require": ["exp", "email"]},
         )
@@ -54,4 +60,4 @@ def make_test_jwt(
         "iat": now,
         "exp": exp if exp is not None else now + 3600,
     }
-    return pyjwt.encode(payload, settings.secret_key, algorithm="HS256")
+    return pyjwt.encode(payload, _derive_signing_key(settings.secret_key), algorithm="HS256")
