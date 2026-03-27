@@ -1,3 +1,4 @@
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -31,6 +32,15 @@ class Settings(BaseSettings):
 
     # App
     app_url: str = "http://localhost:8000"
+
+    @model_validator(mode="after")
+    def check_secret_key(self):
+        if not self.dev_mode and self.secret_key == "change-me-in-production":
+            raise ValueError(
+                "LINGO_SECRET_KEY must be set to a random value in production. "
+                "Generate one with: python -c 'import secrets; print(secrets.token_hex(32))'"
+            )
+        return self
 
 
 settings = Settings()
