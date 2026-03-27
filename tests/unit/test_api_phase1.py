@@ -393,7 +393,10 @@ class TestPromoteDismissAPI:
 
 class TestExportAPI:
     async def test_export_returns_markdown(self, client):
-        response = await client.get("/api/v1/export")
+        response = await client.get(
+            "/api/v1/export",
+            headers={"X-User-Id": client._admin_id},
+        )
         assert response.status_code == 200
         assert "text/markdown" in response.headers["content-type"]
 
@@ -407,13 +410,19 @@ class TestExportAPI:
         # Create a pending term
         await _create_term(client, "PENDEXP", "Pending export term")
 
-        response = await client.get("/api/v1/export")
+        response = await client.get(
+            "/api/v1/export",
+            headers={"X-User-Id": client._admin_id},
+        )
         content = response.text
         assert "OFFEXP" in content
         assert "PENDEXP" not in content
 
     async def test_export_pagination(self, client):
-        response = await client.get("/api/v1/export?offset=0&limit=10")
+        response = await client.get(
+            "/api/v1/export?offset=0&limit=10",
+            headers={"X-User-Id": client._admin_id},
+        )
         assert response.status_code == 200
 
 

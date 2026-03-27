@@ -3,6 +3,11 @@
 All notable changes to Lingo are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.5.5] - 2026-03-27
+
+### Fixed
+- **Export endpoint auth (P0):** `GET /api/v1/export` now requires authentication via `CurrentUser` dependency. Previously any unauthenticated caller could paginate the entire glossary with no token required. Fixes #9.
+
 ## [0.5.4] - 2026-03-26
 
 ### Added
