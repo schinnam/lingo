@@ -1031,7 +1031,7 @@ wheels = [
 
 [[package]]
 name = "lingo"
-version = "0.5.1"
+version = "0.5.3"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },
