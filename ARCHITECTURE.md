@@ -136,6 +136,8 @@ Three modes, evaluated in order by the `CurrentUser` dependency in `api/deps.py`
 
 The MCP endpoint has its own auth middleware (`MCPBearerAuthMiddleware`) using `LINGO_MCP_BEARER_TOKEN`. It wraps the FastMCP ASGI app and is mounted at `/mcp`.
 
+CORS is handled by FastAPI's `CORSMiddleware`, configured with `allow_origins=[settings.app_url]`. The allowed origin defaults to `http://localhost:8000` and is overridable via the `LINGO_APP_URL` environment variable. This restricts cross-origin requests to the configured app URL rather than allowing `*`.
+
 ---
 
 ## Scheduler
