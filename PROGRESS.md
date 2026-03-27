@@ -46,7 +46,7 @@
 
 | Feature | Status | Notes |
 |---|---|---|
-| Dev mode auth (`LINGO_DEV_MODE=true`, X-User-Id header) | ✅ Done | Warning banner needed in UI |
+| Dev mode auth (`LINGO_DEV_MODE=true`, X-User-Id header) | ✅ Done | X-User-Id only accepted when `settings.dev_mode=True` (security fix) |
 | OIDC/SSO middleware (Authlib) | ✅ Done | HS256 JWT; email claim upserts User; RS256/JWKS-URL path in v2 |
 | Role enforcement (member / editor / admin) | ✅ Done | `require_role` dep wired to all routes |
 | MCP Bearer token auth | ✅ Done | sha256 hash lookup; last_used_at updated on use |

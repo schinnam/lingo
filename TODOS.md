@@ -7,6 +7,7 @@
 **Impact:** Frontend expects `{ items, total, offset, limit }` but backend returns bare `Term[]`. `data?.items` is always `undefined`. Term list shows empty on every page load — silent production outage.
 **Fix:** Add `TermsListResponse` schema to backend and return it, OR change frontend types to expect `Term[]` directly.
 **Priority:** P0
+**Completed:** 2026-03-26 — Added `TermsListResponse` to backend schema; updated `list_terms` to return paginated envelope. Also added `counts_by_status` to fix #2.
 
 ---
 
@@ -15,6 +16,7 @@
 **Impact:** Any caller who knows a valid UUID can impersonate any user in production. `owner_id` is returned in every `TermResponse`. No `settings.dev_mode` gate.
 **Fix:** Gate the `X-User-Id` bypass behind `if settings.dev_mode:`.
 **Priority:** P0
+**Completed:** 2026-03-26 — Gated X-User-Id behind `settings.dev_mode`; tests updated to set `dev_mode=True`.
 
 ---
 
@@ -23,6 +25,7 @@
 **Impact:** `term.relationships.length` throws TypeError — backend doesn't include `relationships` in `TermResponse`. Detail panel crashes on every open.
 **Fix:** Guard with `term.relationships ?? []` OR add `relationships` field to the backend `TermDetail` endpoint.
 **Priority:** P0
+**Completed:** 2026-03-26 — Guarded with `term.relationships ?? []` in both `.length` check and `.map()` call.
 
 ---
 
@@ -31,6 +34,7 @@
 **Impact:** Open modal, fill fields, click Cancel — stale values + validation errors reappear on next open.
 **Fix:** Call `resetForm()` in the Cancel handler.
 **Priority:** P1
+**Completed:** 2026-03-26 — Cancel handler now clears all fields and errors before calling `onClose()`.
 
 ---
 
@@ -39,6 +43,7 @@
 **Impact:** Per-status counts computed only over current page (≤100). Shows "Official (0)" when 400 exist on later pages.
 **Fix:** Fetch per-status counts from backend or use separate count queries.
 **Priority:** P1
+**Completed:** 2026-03-26 — Backend now returns `counts_by_status` in `TermsListResponse`; frontend uses that instead of filtering current page items.
 
 ---
 
@@ -47,6 +52,7 @@
 **Impact:** Re-running upgrade after downgrade fails with `ERROR: type "jobtype" already exists`.
 **Fix:** Add `op.execute("DROP TYPE IF EXISTS jobtype, jobstatus, relationshiptype")` in `downgrade()`.
 **Priority:** P1
+**Completed:** 2026-03-26 — Added `DROP TYPE IF EXISTS` for all three enum types in `downgrade()`.
 
 ---
 

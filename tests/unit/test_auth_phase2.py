@@ -14,6 +14,7 @@ from lingo.models import User
 from lingo.models.token import Token
 from lingo.main import app
 from lingo.db.session import get_session
+from lingo.config import settings
 
 
 # ---------------------------------------------------------------------------
@@ -54,6 +55,7 @@ async def client(test_session_factory, db_users):
             yield sess
 
     app.dependency_overrides[get_session] = _override_get_session
+    settings.dev_mode = True
 
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
@@ -65,6 +67,7 @@ async def client(test_session_factory, db_users):
         yield ac
 
     app.dependency_overrides.clear()
+    settings.dev_mode = False
 
 
 def _make_api_token(raw: str | None = None) -> tuple[str, str]:
@@ -226,6 +229,18 @@ class TestAuthMethodPriority:
             headers={"X-User-Id": client._admin_id},
         )
         assert resp.status_code == 200
+
+    async def test_x_user_id_rejected_when_dev_mode_off(self, client):
+        """X-User-Id must be rejected in production (dev_mode=False)."""
+        settings.dev_mode = False
+        try:
+            resp = await client.get(
+                _AUTHED_READ,
+                headers={"X-User-Id": client._admin_id},
+            )
+            assert resp.status_code == 401
+        finally:
+            settings.dev_mode = True  # restore for remaining tests in fixture
 
     async def test_both_auth_headers_bearer_wins(self, client, test_session_factory):
         """When both X-User-Id and Authorization: Bearer are provided, Bearer token wins."""

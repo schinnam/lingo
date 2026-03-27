@@ -7,6 +7,7 @@ from lingo.models.base import Base
 from lingo.models import User
 from lingo.main import app
 from lingo.db.session import get_session
+from lingo.config import settings
 
 
 # ---------------------------------------------------------------------------
@@ -35,6 +36,7 @@ async def client(test_session_factory):
             yield sess
 
     app.dependency_overrides[get_session] = _override_get_session
+    settings.dev_mode = True
 
     async with test_session_factory() as sess:
         # seed an admin user for auth header
@@ -51,6 +53,7 @@ async def client(test_session_factory):
         yield ac
 
     app.dependency_overrides.clear()
+    settings.dev_mode = False
 
 
 # ---------------------------------------------------------------------------
@@ -135,8 +138,23 @@ class TestListTermsAPI:
         response = await client.get("/api/v1/terms")
         assert response.status_code == 200
         data = response.json()
-        assert isinstance(data, list)
-        assert len(data) >= 2
+        assert "items" in data
+        assert "total" in data
+        assert len(data["items"]) >= 2
+
+    async def test_list_terms_counts_by_status(self, client):
+        """counts_by_status reflects all terms, not just the current page."""
+        for name in ("S1", "S2"):
+            await client.post(
+                "/api/v1/terms",
+                json={"name": name, "definition": f"Term {name}"},
+                headers={"X-User-Id": client._admin_id},
+            )
+        response = await client.get("/api/v1/terms")
+        data = response.json()
+        assert "counts_by_status" in data
+        # newly created terms are 'pending' by default
+        assert data["counts_by_status"].get("pending", 0) >= 2
 
     async def test_list_terms_filter_by_status(self, client):
         response = await client.get("/api/v1/terms?status=pending")
@@ -150,7 +168,7 @@ class TestListTermsAPI:
         )
         response = await client.get("/api/v1/terms?q=Domain")
         assert response.status_code == 200
-        names = [t["name"] for t in response.json()]
+        names = [t["name"] for t in response.json()["items"]]
         assert "DNS" in names
 
 

@@ -12,10 +12,12 @@ from lingo.api.schemas import (
     RelationshipResponse,
     TermCreate,
     TermResponse,
+    TermsListResponse,
     TermUpdate,
     VoteResponse,
 )
 from lingo.models.vote import Vote
+from lingo.models.term import Term as TermModel
 from lingo.services.term_service import (
     AlreadyOwnedError,
     InvalidStatusTransitionError,
@@ -70,7 +72,7 @@ async def create_term(
     return _term_to_response(term)
 
 
-@router.get("", response_model=list[TermResponse])
+@router.get("", response_model=TermsListResponse)
 async def list_terms(
     session: SessionDep,
     q: Optional[str] = Query(None),
@@ -81,11 +83,41 @@ async def list_terms(
 ):
     svc = TermService(session)
     terms = await svc.list(q=q, status=status, category=category, limit=limit, offset=offset)
+    # Count total matching rows (without pagination)
+    count_stmt = select(func.count()).select_from(TermModel)
+    if status is not None:
+        count_stmt = count_stmt.where(TermModel.status == status)
+    if category is not None:
+        count_stmt = count_stmt.where(TermModel.category == category)
+    if q is not None:
+        pattern = f"%{q}%"
+        count_stmt = count_stmt.where(
+            TermModel.name.ilike(pattern)
+            | TermModel.definition.ilike(pattern)
+            | TermModel.full_name.ilike(pattern)
+        )
+    total = (await session.execute(count_stmt)).scalar() or 0
+    # Per-status counts (filtered by q/category but not by status)
+    status_count_stmt = (
+        select(TermModel.status, func.count())
+        .select_from(TermModel)
+        .group_by(TermModel.status)
+    )
+    if category is not None:
+        status_count_stmt = status_count_stmt.where(TermModel.category == category)
+    if q is not None:
+        pattern = f"%{q}%"
+        status_count_stmt = status_count_stmt.where(
+            TermModel.name.ilike(pattern)
+            | TermModel.definition.ilike(pattern)
+            | TermModel.full_name.ilike(pattern)
+        )
+    counts_by_status = {str(k): v for k, v in (await session.execute(status_count_stmt)).all()}
     results = []
     for t in terms:
         vc = await _count_votes(session, t.id)
         results.append(_term_to_response(t, vc))
-    return results
+    return TermsListResponse(items=results, total=total, offset=offset, limit=limit, counts_by_status=counts_by_status)
 
 
 @router.get("/{term_id}", response_model=TermResponse)

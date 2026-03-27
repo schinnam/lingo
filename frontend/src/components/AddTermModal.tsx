@@ -5,6 +5,7 @@ interface AddTermModalProps {
   isOpen: boolean
   onClose: () => void
   onSubmit: (payload: CreateTermPayload) => Promise<void>
+  isPending?: boolean
 }
 
 interface FormErrors {
@@ -12,13 +13,12 @@ interface FormErrors {
   definition?: string
 }
 
-export function AddTermModal({ isOpen, onClose, onSubmit }: AddTermModalProps) {
+export function AddTermModal({ isOpen, onClose, onSubmit, isPending = false }: AddTermModalProps) {
   const [name, setName] = useState('')
   const [definition, setDefinition] = useState('')
   const [fullName, setFullName] = useState('')
   const [category, setCategory] = useState('')
   const [errors, setErrors] = useState<FormErrors>({})
-  const [submitting, setSubmitting] = useState(false)
 
   if (!isOpen) return null
 
@@ -31,21 +31,21 @@ export function AddTermModal({ isOpen, onClose, onSubmit }: AddTermModalProps) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (isPending) return
     const errs = validate()
     if (Object.keys(errs).length > 0) {
       setErrors(errs)
       return
     }
     setErrors({})
-    setSubmitting(true)
     try {
       await onSubmit({ name: name.trim(), definition: definition.trim(), full_name: fullName, category })
       setName('')
       setDefinition('')
       setFullName('')
       setCategory('')
-    } finally {
-      setSubmitting(false)
+    } catch {
+      // onSubmit error surfaces via the mutation's error state in the parent
     }
   }
 
@@ -119,17 +119,24 @@ export function AddTermModal({ isOpen, onClose, onSubmit }: AddTermModalProps) {
           <div className="flex gap-3 justify-end">
             <button
               type="button"
-              onClick={onClose}
+              onClick={() => {
+                setName('')
+                setDefinition('')
+                setFullName('')
+                setCategory('')
+                setErrors({})
+                onClose()
+              }}
               className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={submitting}
+              disabled={isPending}
               className="px-4 py-2 text-sm text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
             >
-              {submitting ? 'Adding...' : 'Add Term'}
+              {isPending ? 'Adding...' : 'Add Term'}
             </button>
           </div>
         </form>

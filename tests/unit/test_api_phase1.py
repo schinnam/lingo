@@ -8,6 +8,7 @@ from lingo.models.base import Base
 from lingo.models import User, Term
 from lingo.main import app
 from lingo.db.session import get_session
+from lingo.config import settings
 
 
 # ---------------------------------------------------------------------------
@@ -35,6 +36,7 @@ async def client(test_session_factory):
             yield sess
 
     app.dependency_overrides[get_session] = _override_get_session
+    settings.dev_mode = True
 
     async with test_session_factory() as sess:
         admin = User(email="admin@lingo.dev", display_name="Admin", role="admin")
@@ -57,6 +59,7 @@ async def client(test_session_factory):
         yield ac
 
     app.dependency_overrides.clear()
+    settings.dev_mode = False
 
 
 async def _create_term(client, name="TERM", definition="A term", user_id=None):
