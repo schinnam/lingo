@@ -197,4 +197,6 @@ Interactive action handlers: `staleness_confirm`, `staleness_update` (Block Kit 
 
 **Optimistic concurrency on updates.** `PUT /api/v1/terms/{id}` requires a `version` field matching the current row version. A mismatch returns 409. This prevents silent overwrites when two editors edit the same term concurrently.
 
+**CAS on vote status transitions.** `VoteService.vote()` uses a compare-and-swap `UPDATE terms SET status=?, version=version+1 WHERE id=? AND status=? AND version=?` for status transitions. Two concurrent votes both hitting the threshold will race; exactly one wins (`rowcount=1`) and fires the transition, while the other silently skips it (`rowcount=0`). Both votes still succeed — only the transition fires once.
+
 **MCP is read-only.** Write access via AI agents would bypass the user identity and vote-based governance model. Keeping MCP read-only is intentional.
