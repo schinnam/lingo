@@ -61,6 +61,7 @@
 **Impact:** The export endpoint has no auth dependency (`SessionDep` only). Any unauthenticated caller can paginate through the entire glossary with no token required. Every other write endpoint requires `CurrentUser`.
 **Fix:** Add `current_user: CurrentUser` to `export_terms` function signature.
 **Priority:** P2
+**Completed:** v0.5.5 (2026-03-27)
 
 ---
 
