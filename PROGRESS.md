@@ -10,7 +10,7 @@
 |---|---|---|
 | Project scaffold (uv, pyproject.toml, dir structure) | ✅ Done | |
 | SQLAlchemy models (Term, User, Vote, Token, History, Job) | ✅ Done | |
-| Alembic async migration setup | ✅ Done | Needs first migration generated |
+| Alembic async migration setup | ✅ Done | |
 | DB session + async engine | ✅ Done | |
 | TermService — CRUD + optimistic locking | ✅ Done | |
 | VoteService — dedup + auto status transitions | ✅ Done | |
@@ -129,7 +129,7 @@
 |---|---|---|
 | Dockerfile | ✅ Done | `python:3.12-slim` + uv |
 | docker-compose (lingo + postgres) | ✅ Done | |
-| Alembic first migration (initial schema) | ⬜ Not Started | `uv run alembic revision --autogenerate` |
+| Alembic first migration (initial schema) | ✅ Done | `2277c37b0174_initial_schema` — all 7 tables |
 | Helm chart (Kubernetes) | ⬜ Not Started | |
 | pg_trgm extension migration | ⬜ Not Started | Fuzzy search / "did you mean?" |
 | GIN index on `search_vector` | ⬜ Not Started | |
@@ -154,7 +154,7 @@
 | Integration: Postgres (real DB) | 0 | ⬜ Not Started |
 | Concurrency: vote race condition | 0 | ⬜ Not Started (P1) |
 
-**Total: 259 / 259 passing (205 Python + 47 Vitest + 7 frontend config tests)**
+**Total: 252 / 252 passing (205 pytest + 47 Vitest)**
 
 ---
 
