@@ -124,4 +124,5 @@ def downgrade() -> None:
     op.drop_table('terms')
     op.drop_table('users')
     op.drop_table('jobs')
+    op.execute("DROP TYPE IF EXISTS jobtype, jobstatus, relationshiptype")
     # ### end Alembic commands ###
