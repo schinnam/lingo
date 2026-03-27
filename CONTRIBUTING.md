@@ -26,13 +26,18 @@ LINGO_DEV_MODE=true uv run uvicorn lingo.main:app --reload
 
 Server: `http://localhost:8000` — `LINGO_DEV_MODE=true` disables auth so you can test without OIDC.
 
-Frontend (only needed if you change UI code):
+**Frontend development** — two modes:
 
 ```bash
-cd frontend && npm install && npm run build
+# Fast iteration with HMR (Vite dev server, NOT served by FastAPI)
+cd frontend && npm install && npm run dev
+
+# Full-stack / production-parity (FastAPI serves the built output)
+cd frontend && npm run build
+# Build output goes to src/lingo/static/ — commit this if you changed the UI
 ```
 
-Build output goes to `src/lingo/static/` and is served by FastAPI.
+If you test via `http://localhost:8000` without rebuilding, you'll see stale output.
 
 ## Running tests
 
@@ -64,8 +69,9 @@ cd frontend && npm test
 
 Follow red/green TDD: write a failing test first, then implement. PRs without tests for new behavior will be asked to add them before merge.
 
-- Backend unit tests live in `tests/unit/` and must not require Docker.
-- Backend integration tests live in `tests/integration/` and hit a real Postgres instance. Use the fixtures in `tests/integration/conftest.py` — do not add `asyncio_mode` overrides or mock the database.
+- Backend unit tests live in `tests/unit/` and use an in-memory SQLite database — no Docker required, fast.
+- Backend integration tests live in `tests/integration/` and hit a real Postgres instance. Use the fixtures in `tests/integration/conftest.py` — do not mock the database or add `asyncio_mode` overrides.
+- `tests/conftest.py` sets `LINGO_DEV_MODE=true` automatically — you do not need to set it manually when running tests. `X-User-Id` auth in test clients works because of this; it is not free in production.
 - Frontend tests use Vitest + React Testing Library in `frontend/src/`.
 
 ## Making changes
@@ -73,7 +79,7 @@ Follow red/green TDD: write a failing test first, then implement. PRs without te
 ### Backend
 
 - Keep async throughout — all database calls go through SQLAlchemy async sessions.
-- New database columns require an Alembic migration: `uv run alembic revision --autogenerate -m "describe the change"`. Review the generated migration before committing.
+- New database columns require an Alembic migration: `uv run alembic revision --autogenerate -m "describe the change"`. Always review the generated file before committing — autogenerate misses check constraints and PostgreSQL-specific types.
 - The scheduler (`APScheduler`) runs in-process and requires `--workers 1` in production. Keep scheduled jobs stateless and idempotent.
 - New API endpoints must require authentication. Do not add unauthenticated endpoints without a strong reason.
 
