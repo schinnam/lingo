@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -60,19 +60,42 @@ class VoteService:
             await self._session.rollback()
             raise AlreadyVotedError(f"User {user_id} already voted on term {term_id}")
 
-        # Count votes
+        # Count votes inside the same transaction — flush ensures our vote is visible
         vote_count = (await self._session.execute(
             select(func.count()).select_from(Vote).where(Vote.term_id == term_id)
         )).scalar()
 
-        # Auto-transition
+        # CAS status transition: atomic UPDATE ... WHERE status=<expected> AND version=<seen>
+        # If another concurrent session already transitioned, rowcount == 0 and we skip.
         transition = None
-        if term.status == "community" and vote_count >= self._official_threshold:
-            term.status = "official"
-            transition = StatusTransition.to_official
-        elif term.status == "pending" and vote_count >= self._community_threshold:
-            term.status = "community"
-            transition = StatusTransition.to_community
+        snapshot_status = term.status
+        snapshot_version = term.version
+
+        if snapshot_status == "community" and vote_count >= self._official_threshold:
+            new_status = "official"
+            desired_transition = StatusTransition.to_official
+        elif snapshot_status == "pending" and vote_count >= self._community_threshold:
+            new_status = "community"
+            desired_transition = StatusTransition.to_community
+        else:
+            new_status = None
+            desired_transition = None
+
+        if new_status is not None:
+            result = await self._session.execute(
+                update(Term)
+                .where(
+                    Term.id == term_id,
+                    Term.status == snapshot_status,
+                    Term.version == snapshot_version,
+                )
+                .values(status=new_status, version=snapshot_version + 1)
+            )
+            if result.rowcount == 1:
+                # We won the CAS — update the in-memory object to stay consistent
+                term.status = new_status
+                term.version = snapshot_version + 1
+                transition = desired_transition
 
         await self._session.commit()
         return VoteResult(vote_count=vote_count, transition=transition)
