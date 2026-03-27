@@ -22,7 +22,6 @@ services:
     environment:
       LINGO_DATABASE_URL: postgresql+asyncpg://lingo:lingo@postgres:5432/lingo
       LINGO_DEV_MODE: "true"
-      LINGO_SECRET_KEY: "change-me-in-production"
     depends_on:
       postgres:
         condition: service_healthy

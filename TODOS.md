@@ -56,6 +56,30 @@
 
 ---
 
+### #14 GET /api/v1/export unauthenticated — bulk extraction
+**File:** `src/lingo/api/routes/export.py:12`
+**Impact:** The export endpoint has no auth dependency (`SessionDep` only). Any unauthenticated caller can paginate through the entire glossary with no token required. Every other write endpoint requires `CurrentUser`.
+**Fix:** Add `current_user: CurrentUser` to `export_terms` function signature.
+**Priority:** P2
+
+---
+
+### #15 Container runs as root — no USER directive in Dockerfile
+**File:** `Dockerfile`
+**Impact:** No `USER` directive — the FastAPI process runs as UID 0. Maximizes blast radius of any future RCE (full filesystem read/write inside container).
+**Fix:** Add before CMD: `RUN useradd -m -u 1001 appuser && chown -R appuser:appuser /app` then `USER appuser`.
+**Priority:** P2
+
+---
+
+### #16 No CORS configuration
+**File:** `src/lingo/main.py`
+**Impact:** FastAPI with no `CORSMiddleware` is a future footgun. When someone adds CORS to unblock a frontend integration, `allow_origins=["*"]` is the path of least resistance and opens cross-origin attacks.
+**Fix:** Add `CORSMiddleware` with `allow_origins=[settings.app_url]` before the app needs it.
+**Priority:** P2
+
+---
+
 ### #4 Dispute endpoint is a silent no-op
 **File:** `src/lingo/api/routes/terms.py:164-177`
 **Impact:** `POST /terms/{id}/dispute` sets no flag, sends no notification. User action silently discarded.
