@@ -8,6 +8,7 @@ from fastapi import Depends, Header, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lingo.config import settings
 from lingo.db.session import get_session
 from lingo.models import User
 from lingo.models.token import Token
@@ -104,8 +105,8 @@ async def get_current_user(
 
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
-    # Dev-mode: X-User-Id header
-    if x_user_id is None:
+    # Dev-mode: X-User-Id header (only allowed when dev_mode is enabled)
+    if not settings.dev_mode or x_user_id is None:
         raise HTTPException(status_code=401, detail="Not authenticated")
     try:
         user_uuid = uuid.UUID(x_user_id)
