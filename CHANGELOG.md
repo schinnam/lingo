@@ -3,6 +3,11 @@
 All notable changes to Lingo are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.5.3] - 2026-03-26
+
+### Added
+- **CORS middleware (P0):** `CORSMiddleware` added with `allow_origins=[settings.app_url]` — scoped to the configured app URL (default: `http://localhost:8000`, overridable via `LINGO_APP_URL`). Prevents `allow_origins=["*"]` footgun when frontend integration is added.
+
 ## [0.5.2] - 2026-03-26
 
 ### Fixed

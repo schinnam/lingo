@@ -77,6 +77,7 @@
 **Impact:** FastAPI with no `CORSMiddleware` is a future footgun. When someone adds CORS to unblock a frontend integration, `allow_origins=["*"]` is the path of least resistance and opens cross-origin attacks.
 **Fix:** Add `CORSMiddleware` with `allow_origins=[settings.app_url]` before the app needs it.
 **Priority:** P2
+**Completed:** v0.5.3 (2026-03-26)
 
 ---
 
