@@ -22,6 +22,11 @@ runner = CliRunner()
 # Helpers
 # ---------------------------------------------------------------------------
 
+def _terms_envelope(items: list) -> dict:
+    """Wrap a list of term dicts in the TermsListResponse envelope."""
+    return {"items": items, "total": len(items), "offset": 0, "limit": 100, "counts_by_status": {}}
+
+
 def _mock_response(json_data=None, status_code=200, text=""):
     resp = MagicMock()
     resp.status_code = status_code
@@ -60,7 +65,7 @@ class TestDefine:
         ]
         with patch("lingo.cli.main.httpx.Client") as mock_client_cls:
             mock_client = mock_client_cls.return_value.__enter__.return_value
-            mock_client.get.return_value = _mock_response(terms)
+            mock_client.get.return_value = _mock_response(_terms_envelope(terms))
             result = runner.invoke(app, ["define", "BART"])
 
         assert result.exit_code == 0
@@ -72,7 +77,7 @@ class TestDefine:
     def test_define_not_found(self):
         with patch("lingo.cli.main.httpx.Client") as mock_client_cls:
             mock_client = mock_client_cls.return_value.__enter__.return_value
-            mock_client.get.return_value = _mock_response([])
+            mock_client.get.return_value = _mock_response(_terms_envelope([]))
             result = runner.invoke(app, ["define", "UNKNWN"])
 
         assert result.exit_code != 0 or "not found" in result.output.lower()
@@ -97,7 +102,7 @@ class TestDefine:
         ]
         with patch("lingo.cli.main.httpx.Client") as mock_client_cls:
             mock_client = mock_client_cls.return_value.__enter__.return_value
-            mock_client.get.return_value = _mock_response(terms)
+            mock_client.get.return_value = _mock_response(_terms_envelope(terms))
             result = runner.invoke(app, ["define", "bart"])
 
         assert result.exit_code == 0
@@ -200,7 +205,7 @@ class TestList:
         ]
         with patch("lingo.cli.main.httpx.Client") as mock_client_cls:
             mock_client = mock_client_cls.return_value.__enter__.return_value
-            mock_client.get.return_value = _mock_response(terms)
+            mock_client.get.return_value = _mock_response(_terms_envelope(terms))
             result = runner.invoke(app, ["list"])
 
         assert result.exit_code == 0
@@ -210,7 +215,7 @@ class TestList:
     def test_list_with_status_filter(self):
         with patch("lingo.cli.main.httpx.Client") as mock_client_cls:
             mock_client = mock_client_cls.return_value.__enter__.return_value
-            mock_client.get.return_value = _mock_response([])
+            mock_client.get.return_value = _mock_response(_terms_envelope([]))
             result = runner.invoke(app, ["list", "--status", "official"])
 
         assert result.exit_code == 0
@@ -221,7 +226,7 @@ class TestList:
     def test_list_empty(self):
         with patch("lingo.cli.main.httpx.Client") as mock_client_cls:
             mock_client = mock_client_cls.return_value.__enter__.return_value
-            mock_client.get.return_value = _mock_response([])
+            mock_client.get.return_value = _mock_response(_terms_envelope([]))
             result = runner.invoke(app, ["list"])
 
         assert result.exit_code == 0
