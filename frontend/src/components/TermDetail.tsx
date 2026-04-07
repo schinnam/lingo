@@ -1,14 +1,16 @@
 import type { TermDetail as TermDetailType } from '../types'
+import type { Features } from '../api/features'
 import { StatusBadge } from './StatusBadge'
 
 interface TermDetailProps {
   term: TermDetailType
+  features: Features
   onClose: () => void
   onVote: (id: string) => void
   onDispute: (id: string) => void
 }
 
-export function TermDetail({ term, onClose, onVote, onDispute }: TermDetailProps) {
+export function TermDetail({ term, features, onClose, onVote, onDispute }: TermDetailProps) {
   return (
     <div
       role="dialog"
@@ -34,8 +36,10 @@ export function TermDetail({ term, onClose, onVote, onDispute }: TermDetailProps
       )}
 
       <div className="flex items-center gap-3 mb-4">
-        <StatusBadge status={term.status} isStale={term.is_stale} />
-        <span className="text-sm text-gray-500">👍 <span>{term.vote_count}</span></span>
+        {features.voting && <StatusBadge status={term.status} isStale={features.staleness ? term.is_stale : false} />}
+        {features.voting && (
+          <span className="text-sm text-gray-500">👍 <span>{term.vote_count}</span></span>
+        )}
       </div>
 
       <p className="text-sm text-gray-800 mb-4">{term.definition}</p>
@@ -44,7 +48,7 @@ export function TermDetail({ term, onClose, onVote, onDispute }: TermDetailProps
         <p className="text-xs text-gray-500 mb-2">Owner: <span>@{term.owner.display_name}</span></p>
       )}
 
-      {(term.relationships ?? []).length > 0 && (
+      {features.relationships && (term.relationships ?? []).length > 0 && (
         <div className="mb-4">
           <p className="text-xs font-medium text-gray-500 uppercase mb-1">Related Terms</p>
           <ul className="space-y-1">
@@ -58,22 +62,24 @@ export function TermDetail({ term, onClose, onVote, onDispute }: TermDetailProps
         </div>
       )}
 
-      <div className="flex gap-2 mt-auto pt-4 border-t border-gray-100">
-        <button
-          onClick={() => onVote(term.id)}
-          aria-label="Vote for this term"
-          className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
-        >
-          👍 Vote
-        </button>
-        <button
-          onClick={() => onDispute(term.id)}
-          aria-label="Dispute this term"
-          className="flex-1 px-3 py-2 border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 transition-colors"
-        >
-          ⚑ Dispute
-        </button>
-      </div>
+      {features.voting && (
+        <div className="flex gap-2 mt-auto pt-4 border-t border-gray-100">
+          <button
+            onClick={() => onVote(term.id)}
+            aria-label="Vote for this term"
+            className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
+          >
+            👍 Vote
+          </button>
+          <button
+            onClick={() => onDispute(term.id)}
+            aria-label="Dispute this term"
+            className="flex-1 px-3 py-2 border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 transition-colors"
+          >
+            ⚑ Dispute
+          </button>
+        </div>
+      )}
     </div>
   )
 }

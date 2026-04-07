@@ -21,29 +21,31 @@ def create_scheduler(*, session_factory, slack_client) -> AsyncIOScheduler:
 
     scheduler = AsyncIOScheduler()
 
-    scheduler.add_job(
-        run_discovery_job,
-        trigger="cron",
-        hour=2,  # 2 AM daily
-        id="discovery_job",
-        kwargs={
-            "session_factory": session_factory,
-            "slack_client": slack_client,
-            "lookback_days": 90,
-        },
-    )
+    if settings.feature_discovery:
+        scheduler.add_job(
+            run_discovery_job,
+            trigger="cron",
+            hour=2,  # 2 AM daily
+            id="discovery_job",
+            kwargs={
+                "session_factory": session_factory,
+                "slack_client": slack_client,
+                "lookback_days": 90,
+            },
+        )
 
-    scheduler.add_job(
-        run_staleness_job,
-        trigger="cron",
-        day_of_week="mon",
-        hour=3,  # 3 AM every Monday
-        id="staleness_job",
-        kwargs={
-            "session_factory": session_factory,
-            "slack_client": slack_client,
-            "stale_threshold_days": settings.stale_threshold_days,
-        },
-    )
+    if settings.feature_staleness:
+        scheduler.add_job(
+            run_staleness_job,
+            trigger="cron",
+            day_of_week="mon",
+            hour=3,  # 3 AM every Monday
+            id="staleness_job",
+            kwargs={
+                "session_factory": session_factory,
+                "slack_client": slack_client,
+                "stale_threshold_days": settings.stale_threshold_days,
+            },
+        )
 
     return scheduler
