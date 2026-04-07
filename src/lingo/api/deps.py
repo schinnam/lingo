@@ -128,6 +128,22 @@ def require_role(*roles: str):
     return _check
 
 
+def require_feature(flag: str):
+    """Return a dependency that returns 501 when a feature flag is disabled.
+
+    Usage::
+
+        @router.post("/vote", dependencies=[require_feature("voting")])
+    """
+    def _check() -> None:
+        if not getattr(settings, f"feature_{flag}", False):
+            raise HTTPException(
+                status_code=501,
+                detail=f"Feature '{flag}' is disabled on this instance.",
+            )
+    return Depends(_check)
+
+
 CurrentUser = Annotated[User, Depends(get_current_user)]
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 EditorUser = Annotated[User, Depends(require_role("editor", "admin"))]

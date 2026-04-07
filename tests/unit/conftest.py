@@ -4,6 +4,25 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 
 from lingo.models.base import Base
 from lingo.models import User, Term  # ensure all models registered
+from lingo.config import settings
+
+
+@pytest.fixture(autouse=True)
+def enable_all_features():
+    """Enable every feature flag for unit tests so existing route tests keep passing."""
+    prev = {
+        "feature_staleness": settings.feature_staleness,
+        "feature_relationships": settings.feature_relationships,
+        "feature_voting": settings.feature_voting,
+        "feature_discovery": settings.feature_discovery,
+    }
+    settings.feature_staleness = True
+    settings.feature_relationships = True
+    settings.feature_voting = True
+    settings.feature_discovery = True
+    yield
+    for k, v in prev.items():
+        setattr(settings, k, v)
 
 
 @pytest.fixture

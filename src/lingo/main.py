@@ -8,7 +8,7 @@ from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from lingo.api.routes import terms
-from lingo.api.routes import export, users, tokens, admin
+from lingo.api.routes import export, users, tokens, admin, features
 from lingo.config import settings
 from lingo.db.session import SessionFactory
 from lingo.mcp.app import mcp
@@ -66,6 +66,7 @@ app.include_router(export.router)
 app.include_router(users.router)
 app.include_router(tokens.router)
 app.include_router(admin.router)
+app.include_router(features.router)
 
 # MCP endpoint — bearer token auth required
 app.mount("/mcp", MCPBearerAuthMiddleware(_mcp_asgi))

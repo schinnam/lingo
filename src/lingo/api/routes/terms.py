@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import func, select
 
-from lingo.api.deps import CurrentUser, EditorUser, SessionDep
+from lingo.api.deps import CurrentUser, EditorUser, SessionDep, require_feature
 from lingo.api.schemas import (
     HistoryResponse,
     RelationshipCreate,
@@ -170,7 +170,7 @@ async def delete_term(
         raise HTTPException(status_code=404, detail="Term not found")
 
 
-@router.post("/{term_id}/vote", response_model=VoteResponse)
+@router.post("/{term_id}/vote", response_model=VoteResponse, dependencies=[require_feature("voting")])
 async def vote_term(
     term_id: UUID,
     session: SessionDep,
@@ -209,7 +209,7 @@ async def dispute_term(
     return _term_to_response(term, vc)
 
 
-@router.post("/{term_id}/official", response_model=TermResponse)
+@router.post("/{term_id}/official", response_model=TermResponse, dependencies=[require_feature("voting")])
 async def mark_official(
     term_id: UUID,
     session: SessionDep,
@@ -224,7 +224,7 @@ async def mark_official(
     return _term_to_response(term, vc)
 
 
-@router.post("/{term_id}/confirm", response_model=TermResponse)
+@router.post("/{term_id}/confirm", response_model=TermResponse, dependencies=[require_feature("staleness")])
 async def confirm_term(
     term_id: UUID,
     session: SessionDep,
@@ -287,7 +287,7 @@ async def revert_term(
     return _term_to_response(term, vc)
 
 
-@router.post("/{term_id}/relationships", status_code=201, response_model=RelationshipResponse)
+@router.post("/{term_id}/relationships", status_code=201, response_model=RelationshipResponse, dependencies=[require_feature("relationships")])
 async def add_relationship(
     term_id: UUID,
     body: RelationshipCreate,
@@ -307,7 +307,7 @@ async def add_relationship(
     return rel
 
 
-@router.delete("/{term_id}/relationships/{rel_id}", status_code=204)
+@router.delete("/{term_id}/relationships/{rel_id}", status_code=204, dependencies=[require_feature("relationships")])
 async def delete_relationship(
     term_id: UUID,
     rel_id: UUID,
@@ -321,7 +321,7 @@ async def delete_relationship(
         raise HTTPException(status_code=404, detail="Relationship not found")
 
 
-@router.post("/{term_id}/promote", response_model=TermResponse)
+@router.post("/{term_id}/promote", response_model=TermResponse, dependencies=[require_feature("voting")])
 async def promote_term(
     term_id: UUID,
     session: SessionDep,
@@ -338,7 +338,7 @@ async def promote_term(
     return _term_to_response(term, vc)
 
 
-@router.post("/{term_id}/dismiss", status_code=204)
+@router.post("/{term_id}/dismiss", status_code=204, dependencies=[require_feature("voting")])
 async def dismiss_term(
     term_id: UUID,
     session: SessionDep,

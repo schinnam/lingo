@@ -7,6 +7,7 @@ import { TermDetail } from './components/TermDetail'
 import { AddTermModal } from './components/AddTermModal'
 import { DevModeBanner } from './components/DevModeBanner'
 import { useTerms, useTermDetail, useAddTerm, useVoteTerm, useDisputeTerm } from './hooks/useTerms'
+import { useFeatures } from './hooks/useFeatures'
 import type { Term, TermStatus } from './types'
 
 const queryClient = new QueryClient({
@@ -23,7 +24,8 @@ function AppInner() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [addModalOpen, setAddModalOpen] = useState(false)
 
-  const { data, isLoading, isError } = useTerms({ q: search, status: statusFilter })
+  const features = useFeatures()
+  const { data, isLoading, isError } = useTerms({ q: search, status: features.voting ? statusFilter : null })
   const { data: detail } = useTermDetail(selectedId)
   const addTerm = useAddTerm()
   const voteTerm = useVoteTerm()
@@ -82,9 +84,11 @@ function AppInner() {
         </button>
       </header>
 
-      <div className="bg-white border-b border-gray-200 px-8 py-2">
-        <StatusFilter active={statusFilter} counts={counts} onChange={setStatusFilter} />
-      </div>
+      {features.voting && (
+        <div className="bg-white border-b border-gray-200 px-8 py-2">
+          <StatusFilter active={statusFilter} counts={counts} onChange={setStatusFilter} />
+        </div>
+      )}
 
       <main className="flex flex-1 overflow-hidden">
         <div className={`flex-1 overflow-y-auto ${selectedId ? 'hidden md:block' : ''}`}>
@@ -128,6 +132,7 @@ function AppInner() {
           <aside className="w-full md:w-96 border-l border-gray-200 overflow-y-auto">
             <TermDetail
               term={detail}
+              features={features}
               onClose={() => setSelectedId(null)}
               onVote={(id) => voteTerm.mutate(id)}
               onDispute={(id) => disputeTerm.mutate(id)}

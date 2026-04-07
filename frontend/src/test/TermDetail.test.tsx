@@ -2,6 +2,14 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { TermDetail } from '../components/TermDetail'
 import type { TermDetail as TermDetailType } from '../types'
+import type { Features } from '../api/features'
+
+const allFeatures: Features = {
+  discovery: true,
+  relationships: true,
+  voting: true,
+  staleness: true,
+}
 
 const mockTerm: TermDetailType = {
   id: 'abc-123',
@@ -28,63 +36,63 @@ const mockTerm: TermDetailType = {
 
 describe('TermDetail', () => {
   it('renders term name as heading', () => {
-    render(<TermDetail term={mockTerm} onClose={() => {}} onVote={() => {}} onDispute={() => {}} />)
+    render(<TermDetail term={mockTerm} features={allFeatures} onClose={() => {}} onVote={() => {}} onDispute={() => {}} />)
     expect(screen.getByRole('heading', { name: 'BART' })).toBeInTheDocument()
   })
 
   it('renders full_name', () => {
-    render(<TermDetail term={mockTerm} onClose={() => {}} onVote={() => {}} onDispute={() => {}} />)
+    render(<TermDetail term={mockTerm} features={allFeatures} onClose={() => {}} onVote={() => {}} onDispute={() => {}} />)
     expect(screen.getByText('Business Arts Resource Tool')).toBeInTheDocument()
   })
 
   it('renders definition', () => {
-    render(<TermDetail term={mockTerm} onClose={() => {}} onVote={() => {}} onDispute={() => {}} />)
+    render(<TermDetail term={mockTerm} features={allFeatures} onClose={() => {}} onVote={() => {}} onDispute={() => {}} />)
     expect(screen.getByText('A centralized resource hub for business operations.')).toBeInTheDocument()
   })
 
   it('renders status badge', () => {
-    render(<TermDetail term={mockTerm} onClose={() => {}} onVote={() => {}} onDispute={() => {}} />)
+    render(<TermDetail term={mockTerm} features={allFeatures} onClose={() => {}} onVote={() => {}} onDispute={() => {}} />)
     expect(screen.getByText('Official')).toBeInTheDocument()
   })
 
   it('renders vote count', () => {
-    render(<TermDetail term={mockTerm} onClose={() => {}} onVote={() => {}} onDispute={() => {}} />)
+    render(<TermDetail term={mockTerm} features={allFeatures} onClose={() => {}} onVote={() => {}} onDispute={() => {}} />)
     expect(screen.getByText('12')).toBeInTheDocument()
   })
 
   it('renders owner display name', () => {
-    render(<TermDetail term={mockTerm} onClose={() => {}} onVote={() => {}} onDispute={() => {}} />)
+    render(<TermDetail term={mockTerm} features={allFeatures} onClose={() => {}} onVote={() => {}} onDispute={() => {}} />)
     expect(screen.getByText('@Alice')).toBeInTheDocument()
   })
 
   it('renders related term', () => {
-    render(<TermDetail term={mockTerm} onClose={() => {}} onVote={() => {}} onDispute={() => {}} />)
+    render(<TermDetail term={mockTerm} features={allFeatures} onClose={() => {}} onVote={() => {}} onDispute={() => {}} />)
     expect(screen.getByText('FMTL')).toBeInTheDocument()
   })
 
   it('calls onClose when close button clicked', () => {
     const onClose = vi.fn()
-    render(<TermDetail term={mockTerm} onClose={onClose} onVote={() => {}} onDispute={() => {}} />)
+    render(<TermDetail term={mockTerm} features={allFeatures} onClose={onClose} onVote={() => {}} onDispute={() => {}} />)
     fireEvent.click(screen.getByRole('button', { name: /close/i }))
     expect(onClose).toHaveBeenCalled()
   })
 
   it('calls onVote when Vote button clicked', () => {
     const onVote = vi.fn()
-    render(<TermDetail term={mockTerm} onClose={() => {}} onVote={onVote} onDispute={() => {}} />)
+    render(<TermDetail term={mockTerm} features={allFeatures} onClose={() => {}} onVote={onVote} onDispute={() => {}} />)
     fireEvent.click(screen.getByRole('button', { name: /vote/i }))
     expect(onVote).toHaveBeenCalledWith('abc-123')
   })
 
   it('calls onDispute when Dispute button clicked', () => {
     const onDispute = vi.fn()
-    render(<TermDetail term={mockTerm} onClose={() => {}} onVote={() => {}} onDispute={onDispute} />)
+    render(<TermDetail term={mockTerm} features={allFeatures} onClose={() => {}} onVote={() => {}} onDispute={onDispute} />)
     fireEvent.click(screen.getByRole('button', { name: /dispute/i }))
     expect(onDispute).toHaveBeenCalledWith('abc-123')
   })
 
   it('has role=dialog and focus-able panel', () => {
-    render(<TermDetail term={mockTerm} onClose={() => {}} onVote={() => {}} onDispute={() => {}} />)
+    render(<TermDetail term={mockTerm} features={allFeatures} onClose={() => {}} onVote={() => {}} onDispute={() => {}} />)
     expect(screen.getByRole('dialog')).toBeInTheDocument()
   })
 })
