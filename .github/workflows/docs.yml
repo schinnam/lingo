@@ -1,0 +1,22 @@
+name: Deploy Docs
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.zensical.outputs.page_url }}
+    steps:
+      - name: Zensical Action
+        id: zensical
+        uses: cssnr/zensical-action@v1
