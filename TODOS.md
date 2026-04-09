@@ -70,6 +70,7 @@
 **Impact:** No `USER` directive — the FastAPI process runs as UID 0. Maximizes blast radius of any future RCE (full filesystem read/write inside container).
 **Fix:** Add before CMD: `RUN useradd -m -u 1001 appuser && chown -R appuser:appuser /app` then `USER appuser`.
 **Priority:** P2
+**Completed:** v0.5.5 (2026-03-27) — container now runs as non-root user (UID 1001 `appuser`).
 
 ---
 

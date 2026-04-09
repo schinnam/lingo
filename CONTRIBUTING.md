@@ -105,6 +105,8 @@ Always write both `upgrade()` and `downgrade()` in migrations. Missing `downgrad
 | Gotcha | Why it matters |
 |--------|----------------|
 | Use `uv run` for all Python commands | Ensures the managed virtualenv is used, not system Python |
+| `lingo` CLI not on PATH after `uv pip install -e .` | `uv pip install` installs into the project venv, not your global shell. Use `uv run lingo` or `uv tool install .` |
+| `lingo export` shows empty output | Default status filter is `official`. Use `--status pending` to see terms that haven't been promoted yet. |
 | `LINGO_DEV_MODE=true` is dev-only | Never set this in production — it disables auth entirely |
 | `--workers 1` in production | APScheduler runs in-process; multiple workers cause duplicate job execution |
 | `asyncio_mode = "auto"` | Already set in `pyproject.toml` — don't add `@pytest.mark.asyncio` to every test |

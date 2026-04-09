@@ -112,6 +112,8 @@ Install the `lingo` command:
 uv pip install -e .
 ```
 
+> **Note:** `uv pip install -e .` installs into the project virtualenv, so `lingo` may not be on your shell `PATH`. Use `uv run lingo` from the repo directory, or install as a global tool with `uv tool install .` to get a `lingo` command anywhere.
+
 Point it at your server:
 
 ```bash
@@ -123,19 +125,20 @@ export LINGO_API_TOKEN=your-token   # or LINGO_DEV_USER_ID=<uuid> in dev mode
 
 ```bash
 # Look up a term
-lingo define API
+uv run lingo define API
 
-# Add a term
-lingo add "SLA" "Service Level Agreement" --full-name "Service Level Agreement" --category ops
+# Add a term (dev mode: set LINGO_DEV_USER_ID to any valid user UUID)
+LINGO_DEV_USER_ID=<uuid> uv run lingo add "SLA" "Service Level Agreement" --full-name "Service Level Agreement" --category ops
 
 # List terms
-lingo list
-lingo list --status official
-lingo list --category tech --limit 20
+uv run lingo list
+uv run lingo list --status official
+uv run lingo list --category tech --limit 20
 
 # Export as Markdown
-lingo export
-lingo export --status community --output glossary.md
+# Default exports 'official' terms only — use --status to export others
+uv run lingo export --status pending
+uv run lingo export --status community --output glossary.md
 ```
 
 ---
