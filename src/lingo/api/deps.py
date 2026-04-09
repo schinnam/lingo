@@ -50,7 +50,7 @@ async def _resolve_api_token(raw_token: str, session: AsyncSession) -> User | No
 
 async def _resolve_jwt(raw_token: str, session: AsyncSession) -> User | None:
     """Validate a JWT and upsert/resolve a User by email claim."""
-    from lingo.auth.oidc import verify_jwt
+    from lingo.auth.slack_oidc import verify_jwt
 
     payload = verify_jwt(raw_token)
     if payload is None:

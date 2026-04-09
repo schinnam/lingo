@@ -276,7 +276,7 @@ class TestOIDCJWTAuth:
 
     async def test_valid_jwt_creates_user_if_not_exists(self, client, test_session_factory):
         """A valid JWT for an unknown email auto-provisions a member User."""
-        from lingo.auth.oidc import make_test_jwt
+        from lingo.auth.slack_oidc import make_test_jwt
 
         token = make_test_jwt(email="newuser@corp.example", name="New User")
         # POST /api/v1/terms requires CurrentUser (member+)
@@ -300,7 +300,7 @@ class TestOIDCJWTAuth:
 
     async def test_valid_jwt_resolves_existing_user(self, client):
         """A valid JWT for a known email resolves to the existing user."""
-        from lingo.auth.oidc import make_test_jwt
+        from lingo.auth.slack_oidc import make_test_jwt
 
         # admin@corp.example is seeded in db_users fixture
         token = make_test_jwt(email="admin@corp.example", name="Admin")
@@ -312,7 +312,7 @@ class TestOIDCJWTAuth:
 
     async def test_expired_jwt_returns_401(self, client):
         """An expired JWT must return 401."""
-        from lingo.auth.oidc import make_test_jwt
+        from lingo.auth.slack_oidc import make_test_jwt
         import time
 
         token = make_test_jwt(
@@ -361,7 +361,7 @@ class TestOIDCJWTAuth:
             "iat": int(time.time()),
             "exp": int(time.time()) + 3600,
         }
-        from lingo.auth.oidc import _derive_signing_key
+        from lingo.auth.slack_oidc import _derive_signing_key
         token = pyjwt.encode(payload, _derive_signing_key(settings.secret_key), algorithm="HS256")
         resp = await client.get(
             _AUTHED_READ,

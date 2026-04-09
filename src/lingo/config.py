@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     slack_bot_token: str = ""
     slack_app_token: str = ""
     slack_signing_secret: str = ""
+    slack_client_id: str = ""
+    slack_client_secret: str = ""
 
     # MCP
     mcp_bearer_token: str = ""
