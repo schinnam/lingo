@@ -10,6 +10,7 @@ JWT helpers (moved from oidc.py) are also kept here for the existing
 Bearer-JWT auth path in deps.py and for test token creation.
 """
 import hashlib
+import hmac as _hmac
 import time
 import urllib.parse
 from typing import Optional
@@ -35,6 +36,15 @@ class AuthError(Exception):
     def __init__(self, code: str) -> None:
         self.code = code
         super().__init__(code)
+
+
+# ---------------------------------------------------------------------------
+# HMAC helpers
+# ---------------------------------------------------------------------------
+
+def hmac_sign(value: str, secret: str) -> str:
+    """Return a hex HMAC-SHA256 signature of value using secret."""
+    return _hmac.new(secret.encode(), value.encode(), "sha256").hexdigest()
 
 
 # ---------------------------------------------------------------------------

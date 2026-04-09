@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Annotated
 
-from fastapi import Depends, Header, HTTPException
+from fastapi import Depends, Header, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -78,17 +78,19 @@ async def _resolve_jwt(raw_token: str, session: AsyncSession) -> User | None:
 
 
 async def get_current_user(
+    request: Request,
     authorization: Annotated[str | None, Header()] = None,
     x_user_id: Annotated[str | None, Header()] = None,
     session: AsyncSession = Depends(get_session),
 ) -> User:
-    """Resolve the current user from one of three auth methods (in priority order):
+    """Resolve the current user from one of four auth methods (in priority order):
 
     1. Authorization: Bearer <api_token>  — sha256 DB lookup (MCP tokens)
     2. Authorization: Bearer <jwt>        — OIDC JWT validation (SSO)
-    3. X-User-Id: <uuid>                  — dev-mode bypass
+    3. Session cookie                     — set after Slack OIDC callback
+    4. X-User-Id: <uuid>                  — dev-mode bypass
 
-    Bearer always takes priority over X-User-Id when both are present.
+    Bearer always takes priority over session/X-User-Id when present.
     """
     raw_token = _parse_bearer(authorization)
 
@@ -104,6 +106,16 @@ async def get_current_user(
             return user
 
         raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    # Session cookie (set after Slack OIDC login)
+    user_id_str = request.session.get("user_id")
+    if user_id_str:
+        try:
+            user = await session.get(User, uuid.UUID(user_id_str))
+        except ValueError:
+            user = None
+        if user is not None and user.is_active:
+            return user
 
     # Dev-mode: X-User-Id header (only allowed when dev_mode is enabled)
     if not settings.dev_mode or x_user_id is None:
