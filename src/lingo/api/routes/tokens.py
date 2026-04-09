@@ -30,10 +30,10 @@ async def list_tokens(session: SessionDep, current_user: CurrentUser):
 
 
 @router.post("", status_code=201, response_model=TokenCreateResponse)
-async def create_token(body: TokenCreate, session: SessionDep, admin: AdminUser):
+async def create_token(body: TokenCreate, session: SessionDep, current_user: CurrentUser):
     raw, token_hash = _generate_token()
     token = Token(
-        user_id=admin.id,
+        user_id=current_user.id,
         name=body.name,
         token_hash=token_hash,
         scopes=body.scopes,
@@ -51,9 +51,11 @@ async def create_token(body: TokenCreate, session: SessionDep, admin: AdminUser)
 
 
 @router.delete("/{token_id}", status_code=204)
-async def delete_token(token_id: UUID, session: SessionDep, admin: AdminUser):
+async def delete_token(token_id: UUID, session: SessionDep, current_user: CurrentUser):
     token = await session.get(Token, token_id)
     if token is None:
         raise HTTPException(status_code=404, detail="Token not found")
+    if token.user_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not your token")
     await session.delete(token)
     await session.commit()
