@@ -13,7 +13,7 @@ class User(Base):
     id: Mapped[object] = uuid_pk()
     email: Mapped[str] = mapped_column(String, nullable=False, unique=True)
     display_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    slack_user_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    slack_user_id: Mapped[Optional[str]] = mapped_column(String, nullable=True, unique=True, index=True)
     role: Mapped[str] = mapped_column(String, nullable=False, default="member")
     last_login_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
