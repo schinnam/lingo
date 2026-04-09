@@ -4,48 +4,22 @@
 
 Teams accumulate jargon fast. Lingo is where you put it. Add a term from Slack, vote it up, and AI agents can look it up via MCP. Stale terms get a nudge. The whole thing runs on Postgres.
 
-[Get started](getting-started/quickstart.md){ .md-button .md-button--primary }
-[View on GitHub](https://github.com/schinnam/lingo){ .md-button }
+[Get started](getting-started/quickstart.md) | [View on GitHub](https://github.com/schinnam/lingo)
 
 ---
 
 ## Features
 
-<div class="grid cards" markdown>
-
-- **Web UI**
-
-    Searchable term browser with status filters, voting, dispute actions, and a slide-in detail panel.
-
-- **Slack Bot**
-
-    `/lingo define`, `/lingo add`, `/lingo vote`, `/lingo export` — look up and contribute terms without leaving Slack.
-
-- **CLI**
-
-    `lingo define`, `lingo add`, `lingo list`, `lingo export` — terminal access to the full glossary.
-
-- **REST API**
-
-    Full CRUD at `/api/v1/terms` with JWT / OIDC auth and interactive OpenAPI docs at `/docs`.
-
-- **MCP Server**
-
-    `get_term`, `search_terms`, `list_terms` tools for Claude and other MCP-aware AI agents.
-
-- **Auto-Discovery**
-
-    Daily job scans Slack for unknown acronyms and creates `suggested` terms automatically.
-
-- **Staleness Tracking**
-
-    Weekly job DMs term owners when a term hasn't been confirmed in 180 days.
-
-- **Self-Hosted**
-
-    One `docker-compose up` and you're running. PostgreSQL + Lingo, no external dependencies.
-
-</div>
+| Surface | What it does |
+|---|---|
+| **Web UI** | Searchable term browser with status filters, voting, dispute actions, and a slide-in detail panel |
+| **Slack Bot** | `/lingo define`, `/lingo add`, `/lingo vote`, `/lingo export` — look up and contribute terms without leaving Slack |
+| **CLI** | `lingo define`, `lingo add`, `lingo list`, `lingo export` — terminal access to the full glossary |
+| **REST API** | Full CRUD at `/api/v1/terms` with JWT / OIDC auth and interactive OpenAPI docs at `/docs` |
+| **MCP Server** | `get_term`, `search_terms`, `list_terms` tools for Claude and other MCP-aware AI agents |
+| **Auto-Discovery** | Daily job scans Slack for unknown acronyms and creates `suggested` terms automatically |
+| **Staleness Tracking** | Weekly job DMs term owners when a term hasn't been confirmed in 180 days |
+| **Self-Hosted** | One `docker-compose up` and you're running. PostgreSQL + Lingo, no external dependencies |
 
 ---
 
