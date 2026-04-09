@@ -6,9 +6,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware
 
 from lingo.api.routes import terms
-from lingo.api.routes import export, users, tokens, admin, features
+from lingo.api.routes import auth, export, users, tokens, admin, features
 from lingo.config import settings
 from lingo.db.session import SessionFactory
 from lingo.mcp.app import mcp
@@ -48,6 +49,13 @@ app = FastAPI(
 )
 
 app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.secret_key,
+    max_age=86400,
+    https_only=not settings.dev_mode,
+    same_site="lax",
+)
+app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.app_url],
     allow_credentials=True,
@@ -61,6 +69,7 @@ async def health():
     return {"status": "ok"}
 
 
+app.include_router(auth.router)
 app.include_router(terms.router)
 app.include_router(export.router)
 app.include_router(users.router)
