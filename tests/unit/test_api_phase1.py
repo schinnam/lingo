@@ -498,19 +498,61 @@ class TestTokensAPI:
         assert "token" in data  # raw token shown once
         assert data["name"] == "cursor-agent"
 
-    async def test_member_cannot_create_token(self, client):
+    async def test_member_can_create_token(self, client):
         response = await client.post(
             "/api/v1/tokens",
-            json={"name": "bad-token", "scopes": ["read"]},
+            json={"name": "my-token", "scopes": ["read"]},
             headers={"X-User-Id": client._member_id},
         )
-        assert response.status_code == 403
+        assert response.status_code == 201
+        data = response.json()
+        assert "token" in data
+        assert data["user_id"] == client._member_id
 
     async def test_admin_can_delete_token(self, client):
         create_resp = await client.post(
             "/api/v1/tokens",
             json={"name": "to-delete", "scopes": ["read"]},
             headers={"X-User-Id": client._admin_id},
+        )
+        token_id = create_resp.json()["id"]
+        response = await client.delete(
+            f"/api/v1/tokens/{token_id}",
+            headers={"X-User-Id": client._admin_id},
+        )
+        assert response.status_code == 204
+
+    async def test_member_can_delete_own_token(self, client):
+        create_resp = await client.post(
+            "/api/v1/tokens",
+            json={"name": "my-token", "scopes": ["read"]},
+            headers={"X-User-Id": client._member_id},
+        )
+        token_id = create_resp.json()["id"]
+        response = await client.delete(
+            f"/api/v1/tokens/{token_id}",
+            headers={"X-User-Id": client._member_id},
+        )
+        assert response.status_code == 204
+
+    async def test_member_cannot_delete_others_token(self, client):
+        create_resp = await client.post(
+            "/api/v1/tokens",
+            json={"name": "admin-token", "scopes": ["read"]},
+            headers={"X-User-Id": client._admin_id},
+        )
+        token_id = create_resp.json()["id"]
+        response = await client.delete(
+            f"/api/v1/tokens/{token_id}",
+            headers={"X-User-Id": client._member_id},
+        )
+        assert response.status_code == 403
+
+    async def test_admin_can_delete_any_token(self, client):
+        create_resp = await client.post(
+            "/api/v1/tokens",
+            json={"name": "member-token", "scopes": ["read"]},
+            headers={"X-User-Id": client._member_id},
         )
         token_id = create_resp.json()["id"]
         response = await client.delete(
