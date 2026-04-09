@@ -53,17 +53,6 @@ lingo = "lingo.cli.main:app"
 [tool.hatch.build.targets.wheel]
 packages = ["src/lingo"]
 
-[tool.uv]
-dev-dependencies = [
-    "pytest>=8.3.0",
-    "pytest-asyncio>=0.25.0",
-    "pytest-cov>=6.0.0",
-    "httpx>=0.28.0",
-    "anyio>=4.7.0",
-    "aiosqlite>=0.22.1",
-    "asgi-lifespan>=2.1.0",
-    "pip-audit>=2.10.0",
-]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
@@ -73,3 +62,16 @@ pythonpath = ["src"]
 [tool.coverage.run]
 source = ["src/lingo"]
 omit = ["*/migrations/*"]
+
+[dependency-groups]
+dev = [
+    "zensical>=0.0.32",
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.25.0",
+    "pytest-cov>=6.0.0",
+    "httpx>=0.28.0",
+    "anyio>=4.7.0",
+    "aiosqlite>=0.22.1",
+    "asgi-lifespan>=2.1.0",
+    "pip-audit>=2.10.0",
+]

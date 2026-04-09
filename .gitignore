@@ -48,3 +48,7 @@ Thumbs.db
 # Docker
 *.pid
 .gstack/
+
+
+# zenical
+site/
