@@ -14,6 +14,14 @@ from lingo.models.user import User
 from lingo.services.term_service import TermService
 from lingo.services.vote_service import AlreadyVotedError, VoteService
 
+async def resolve_slack_user(slack_user_id: str, session) -> "User | None":
+    """Look up a User by Slack user ID. Returns None if not linked."""
+    result = await session.execute(
+        select(User).where(User.slack_user_id == slack_user_id)
+    )
+    return result.scalar_one_or_none()
+
+
 # Maximum number of terms fetched for an export to avoid memory exhaustion.
 _EXPORT_LIMIT = 1000
 
@@ -69,9 +77,7 @@ async def handle_lingo_add(
             return
 
         # Require a linked Lingo account — anonymous term creation is not allowed.
-        user = (await session.execute(
-            select(User).where(User.slack_user_id == slack_user_id)
-        )).scalar_one_or_none()
+        user = await resolve_slack_user(slack_user_id, session)
 
         if user is None:
             await say(
@@ -112,9 +118,7 @@ async def handle_lingo_vote(
             return
 
         # Resolve user
-        user = (await session.execute(
-            select(User).where(User.slack_user_id == slack_user_id)
-        )).scalar_one_or_none()
+        user = await resolve_slack_user(slack_user_id, session)
 
         if user is None:
             await say(
