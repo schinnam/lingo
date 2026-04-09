@@ -58,8 +58,15 @@ uv pip install -e .
 export LINGO_APP_URL=http://localhost:8000
 export LINGO_DEV_USER_ID=00000000-0000-0000-0000-000000000001   # any UUID in dev mode
 
-lingo define API
+uv run lingo define API
+uv run lingo list
 ```
+
+!!! tip "Getting `lingo` on your PATH"
+    `uv pip install -e .` installs into the project virtualenv, so `lingo` won't be available as a bare command in your shell. Use `uv run lingo` from the repo directory, or run `uv tool install .` once to make `lingo` available globally.
+
+!!! note "Empty export?"
+    `lingo export` defaults to `official` terms only. Since no terms are official yet, it will return an empty glossary. Use `uv run lingo export --status pending` to see your newly added term.
 
 ---
 

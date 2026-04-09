@@ -91,6 +91,19 @@ After setting up the server, install the `lingo` command-line tool:
 uv pip install -e .
 ```
 
+This installs into the project virtualenv. Run commands via `uv run lingo` from the repo directory:
+
+```bash
+uv run lingo --help
+```
+
+To make `lingo` available as a bare command anywhere in your shell, install it as a global tool instead:
+
+```bash
+uv tool install .
+lingo --help
+```
+
 See the [CLI guide](../usage/cli.md) for usage.
 
 ---
