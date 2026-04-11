@@ -56,7 +56,7 @@ src/lingo/
 │       ├── tokens.py    # /api/v1/tokens
 │       └── admin.py     # /api/v1/admin
 ├── auth/
-│   └── oidc.py          # OIDC/JWT middleware
+│   └── oidc.py          # Slack OAuth + JWT middleware
 ├── mcp/
 │   ├── app.py           # FastMCP tools: get_term, search_terms, list_terms
 │   └── auth.py          # MCPBearerAuthMiddleware
@@ -132,9 +132,9 @@ Votes are tallied per term. `VoteService` checks both thresholds on every vote a
 
 Three modes, evaluated in order by the `CurrentUser` dependency in `api/deps.py`:
 
-1. **JWT Bearer** — HS256 token signed with `LINGO_SECRET_KEY`. Standard production path.
-2. **OIDC** — if `LINGO_OIDC_DISCOVERY_URL` is set, tokens are validated against the OIDC provider.
-3. **Dev mode** — `LINGO_DEV_MODE=true` only. `X-User-Id: <uuid>` header accepted. Rejected with 401 in production.
+1. **Slack OAuth** — the web UI uses Sign in with Slack (`openid`, `email`, `profile` scopes). The callback at `/auth/slack/callback` exchanges the code for tokens, creates or updates the user record, and issues a session JWT signed with `LINGO_SECRET_KEY`. Requires `LINGO_SLACK_CLIENT_ID` and `LINGO_SLACK_CLIENT_SECRET`.
+2. **JWT Bearer** — HS256 token signed with `LINGO_SECRET_KEY`. Used by the CLI, MCP, and direct API clients after obtaining a token via Slack OAuth or an admin-issued API token.
+3. **Dev mode** — `LINGO_DEV_MODE=true` only. Visit `/auth/dev/login?email=you@example.com` to get a session without Slack. `X-User-Id: <uuid>` header is also accepted for CLI use in dev. Both are rejected with 401 in production.
 
 The MCP endpoint has its own auth middleware (`MCPBearerAuthMiddleware`) using `LINGO_MCP_BEARER_TOKEN`. It wraps the FastMCP ASGI app and is mounted at `/mcp`.
 

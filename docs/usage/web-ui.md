@@ -83,9 +83,22 @@ New terms start as `suggested`. Submit the form and the term appears in the list
 
 ---
 
+## Signing in
+
+The web UI requires a Slack account. Click the **Sign in with Slack** button on the login page to authenticate:
+
+1. You are redirected to Slack's OAuth consent screen
+2. Slack redirects back to `/auth/slack/callback` after you approve
+3. You are logged in and returned to the term browser
+
+!!! tip "No Slack? Use the API instead"
+    Users without Slack can still access Lingo via the CLI or MCP endpoint using API tokens. Only the web UI requires Slack.
+
+---
+
 ## Dev mode banner
 
-When `LINGO_DEV_MODE=true`, a yellow banner appears at the top of the page as a reminder that authentication is disabled. This is read from a meta tag injected by the server — no extra API call required.
+When `LINGO_DEV_MODE=true`, a yellow banner appears at the top of the page as a reminder that Slack authentication is disabled. Use `http://localhost:8000/auth/dev/login?email=you@example.com` to log in without Slack in this mode. This is read from a meta tag injected by the server — no extra API call required.
 
 !!! warning
     If you see the dev mode banner in a non-development environment, set `LINGO_DEV_MODE=false` immediately.
