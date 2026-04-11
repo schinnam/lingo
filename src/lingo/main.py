@@ -28,6 +28,7 @@ async def lifespan(app: FastAPI):
     if settings.slack_bot_token:
         from slack_sdk.web.async_client import AsyncWebClient
         slack_client = AsyncWebClient(token=settings.slack_bot_token)
+    app.state.slack_client = slack_client
 
     scheduler = create_scheduler(
         session_factory=SessionFactory,

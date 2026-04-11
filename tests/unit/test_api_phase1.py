@@ -85,13 +85,25 @@ async def _create_suggested_term(client, name="SUGG"):
 # ---------------------------------------------------------------------------
 
 class TestDisputeAPI:
-    async def test_dispute_term_returns_200(self, client):
+    async def test_dispute_term_returns_200_and_sets_flag(self, client):
         term = await _create_term(client, "DIS", "Dispute me")
         response = await client.post(
             f"/api/v1/terms/{term['id']}/dispute",
             headers={"X-User-Id": client._member_id},
         )
         assert response.status_code == 200
+        data = response.json()
+        assert data["is_disputed"] is True
+
+    async def test_dispute_with_comment_sets_flag(self, client):
+        term = await _create_term(client, "DIS3", "Dispute with comment")
+        response = await client.post(
+            f"/api/v1/terms/{term['id']}/dispute",
+            json={"comment": "This definition is outdated"},
+            headers={"X-User-Id": client._member_id},
+        )
+        assert response.status_code == 200
+        assert response.json()["is_disputed"] is True
 
     async def test_dispute_missing_term_returns_404(self, client):
         response = await client.post(

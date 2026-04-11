@@ -24,6 +24,10 @@ class TermUpdate(BaseModel):
     change_note: Optional[str] = Field(None, max_length=280)
 
 
+class DisputeRequest(BaseModel):
+    comment: Optional[str] = Field(None, max_length=500)
+
+
 class TermResponse(BaseModel):
     id: UUID
     name: str
@@ -33,6 +37,7 @@ class TermResponse(BaseModel):
     status: str
     source: str
     is_stale: bool
+    is_disputed: bool = False
     version: int
     vote_count: int = 0
     owner_id: Optional[UUID] = None

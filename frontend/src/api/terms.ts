@@ -30,6 +30,6 @@ export async function voteTerm(id: string): Promise<VoteResponse> {
   return res.data
 }
 
-export async function disputeTerm(id: string): Promise<void> {
-  await axios.post(`/api/v1/terms/${id}/dispute`)
+export async function disputeTerm(id: string, comment?: string): Promise<void> {
+  await axios.post(`/api/v1/terms/${id}/dispute`, comment ? { comment } : {})
 }

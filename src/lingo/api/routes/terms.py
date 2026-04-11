@@ -2,11 +2,12 @@
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Body, HTTPException, Query, Request
 from sqlalchemy import func, select
 
 from lingo.api.deps import CurrentUser, EditorUser, SessionDep, require_feature
 from lingo.api.schemas import (
+    DisputeRequest,
     HistoryResponse,
     RelationshipCreate,
     RelationshipResponse,
@@ -16,6 +17,7 @@ from lingo.api.schemas import (
     TermUpdate,
     VoteResponse,
 )
+from lingo.slack.notifications import send_dispute_dm
 from lingo.models.vote import Vote
 from lingo.models.term import Term as TermModel
 from lingo.services.term_service import (
@@ -42,6 +44,7 @@ def _term_to_response(term, vote_count: int = 0) -> TermResponse:
         status=term.status,
         source=term.source,
         is_stale=term.is_stale,
+        is_disputed=term.is_disputed,
         version=term.version,
         vote_count=vote_count,
         owner_id=term.owner_id,
@@ -196,15 +199,31 @@ async def vote_term(
 @router.post("/{term_id}/dispute", response_model=TermResponse)
 async def dispute_term(
     term_id: UUID,
+    request: Request,
+    background_tasks: BackgroundTasks,
     session: SessionDep,
     current_user: CurrentUser,
+    body: DisputeRequest = Body(default=DisputeRequest()),
 ):
-    """Flag a term as disputed. Notifies owner via Slack DM (Phase 4)."""
+    """Flag a term as disputed. Records the dispute and notifies the owner via Slack DM."""
     svc = TermService(session)
     try:
-        term = await svc.get(term_id)
+        term = await svc.dispute(term_id=term_id, by_user=current_user.id, comment=body.comment or "")
     except TermNotFoundError:
         raise HTTPException(status_code=404, detail="Term not found")
+
+    slack_client = getattr(request.app.state, "slack_client", None)
+    if slack_client is not None:
+        from lingo.db.session import SessionFactory
+        background_tasks.add_task(
+            send_dispute_dm,
+            term_id=term.id,
+            disputer_name=current_user.display_name or current_user.email,
+            reason=body.comment or "No reason given",
+            client=slack_client,
+            session_factory=SessionFactory,
+        )
+
     vc = await _count_votes(session, term.id)
     return _term_to_response(term, vc)
 
