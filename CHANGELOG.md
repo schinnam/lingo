@@ -3,6 +3,64 @@
 All notable changes to Lingo are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.7.2] - 2026-04-11
+
+### Added
+- **`/lingo token` Slack command:** New `/lingo token [name]` slash command in the Slack bot — generates an API token for the invoking user's linked Lingo account. Result is sent as an ephemeral message (only visible to the invoking user, never posted to the channel). (#58)
+- **Dispute tracking with comment:** `POST /terms/{id}/dispute` was previously a silent no-op. Now sets an `is_disputed` boolean flag on the term, records an optional comment in term history, fires `send_dispute_dm` as a background task when Slack is configured, and exposes `is_disputed` in `TermResponse` for UI feedback. Frontend: Dispute button reveals an inline textarea for a comment before submitting. Fixes #12. (#59)
+
+## [0.7.1] - 2026-04-11
+
+### Added
+- **Slack auth frontend:** React login page at `/login` with the official Slack brand button; auth gate on `AppInner` checks `/auth/me` on mount and redirects unauthenticated users to `/login`; 401 axios interceptor handles expired sessions. Closes #47. (#55)
+
+### Changed
+- **Documentation — Slack-native auth:** All OIDC/SSO references replaced with Slack OAuth setup steps and the new `LINGO_SLACK_CLIENT_ID` / `LINGO_SLACK_CLIENT_SECRET` env vars. `auth/dev/login?email=...` documented as the dev-mode login shortcut. Closes #49. (#57)
+
+### Internal
+- Test suite updated: `TestOIDCJWTAuth` replaced with `TestSlackOIDCAuth` (4 tests mocking the Slack OIDC callback flow) and `TestAPITokenOwnership` (token CRUD for members and admins). Resolves #48. (#56)
+
+## [0.7.0] - 2026-04-09
+
+### Added
+- **Slack-native authentication (backend):** Replaces the previous OIDC/SSO JWT auth with a full Slack OpenID Connect login flow:
+  - New `src/lingo/auth/slack_oidc.py` module — `build_auth_url`, `exchange_code` (async httpx, never leaks `client_secret`), `get_user_info`, `upsert_user` (lookup by `slack_user_id` → email → create, with `IntegrityError` race handling). Replaces deleted `oidc.py`. Config gains `slack_client_id` and `slack_client_secret` fields. Closes #43. (#53)
+  - Auth routes in `src/lingo/api/routes/auth.py` — `GET /auth/slack/login` (nonce + HMAC-signed state cookie), `GET /auth/slack/callback` (timing-safe state verification via `hmac.compare_digest`, session cookie on success), `GET /auth/dev/login?email=` (dev-mode only, 404 in production), `POST /auth/logout`, `GET /auth/me`. `SessionMiddleware` added to app (httponly, https-only in production). Resolves #44. (#54)
+- **Token self-service:** Any authenticated user can now create and delete their own API tokens (previously admin-only). Members receive 403 when attempting to delete another user's token; admins can delete any token. Closes #45. (#52)
+- **Unique index on `User.slack_user_id`:** Prevents duplicate user rows from concurrent Slack auth callbacks. Alembic migration `7498417a71ae` included. Fixes #42. (#50)
+
+### Changed
+- `get_current_user` dependency gains a session cookie resolver (priority 3, after Bearer token, before dev `X-User-Id` bypass). (#54)
+
+### Internal
+- Refactor: `resolve_slack_user` async helper extracted from `handle_lingo_add` and `handle_lingo_vote` to deduplicate Slack user lookup. No behavioral changes. (#51)
+
+## [0.6.2] - 2026-04-09
+
+### Added
+- **GitHub Pages documentation site:** Full docs site built with Zensical, auto-deployed to `gh-pages` on every push to `main` via `cssnr/zensical-action`. Covers 13 pages: home, installation, quickstart, configuration reference, web UI, CLI, Slack bot, MCP/AI agents, Docker deployment, production security checklist, REST API reference, architecture, and contributing guide. (#36)
+
+### Fixed
+- Fix uv warnings in dependency configuration. (#37)
+- Fix GitHub Actions CI workflow. (#38)
+- Fix documentation site formatting. (#39)
+- Add `zensical.yml` Zensical configuration file. (#40)
+
+## [0.6.1] - 2026-04-07
+
+### Fixed
+- **Docker non-root user (security):** Container now creates and switches to an unprivileged `appuser` (UID 1001) before starting the application, following least-privilege principles. Fixes #10. (#35)
+
+## [0.6.0] - 2026-04-07
+
+### Added
+- **Feature flags:** Four env-var flags let small teams start minimal and opt into complexity as they grow:
+  - `LINGO_FEATURE_DISCOVERY` (default: `false`) — disables Slack auto-discovery job
+  - `LINGO_FEATURE_RELATIONSHIPS` (default: `false`) — disables term linking; returns 501 when off
+  - `LINGO_FEATURE_VOTING` (default: `true`) — when `false`, hides status pipeline, vote/dispute/promote/dismiss UI, and returns 501 from those API routes
+  - `LINGO_FEATURE_STALENESS` (default: `false`) — disables staleness job and confirm route
+- `require_feature()` FastAPI dependency gates affected routes; scheduler conditionally registers jobs; `GET /api/v1/features` exposes current flag state. Frontend `useFeatures()` hook fetches flags once (`stale: Infinity`); `TermDetail` and `StatusFilter` render conditionally. (#34)
+
 ## [0.5.5] - 2026-03-27
 
 ### Fixed
