@@ -8,6 +8,7 @@ import { AddTermModal } from './components/AddTermModal'
 import { DevModeBanner } from './components/DevModeBanner'
 import { useTerms, useTermDetail, useAddTerm, useVoteTerm, useDisputeTerm } from './hooks/useTerms'
 import { useFeatures } from './hooks/useFeatures'
+import { fetchCurrentUser } from './api/auth'
 import type { Term, TermStatus } from './types'
 
 const queryClient = new QueryClient({
@@ -19,6 +20,7 @@ function isDevMode(): boolean {
 }
 
 function AppInner() {
+  const [authStatus, setAuthStatus] = useState<'loading' | 'authed'>('loading')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<TermStatus | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -41,6 +43,14 @@ function AppInner() {
     pending: statusCounts['pending'] ?? 0,
     suggested: statusCounts['suggested'] ?? 0,
   }
+
+  useEffect(() => {
+    fetchCurrentUser()
+      .then(() => setAuthStatus('authed'))
+      .catch(() => {
+        // The 401 interceptor in api/auth.ts handles the redirect to /login.
+      })
+  }, [])
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
@@ -66,6 +76,14 @@ function AppInner() {
   async function handleAddTerm(payload: Parameters<typeof addTerm.mutateAsync>[0]) {
     await addTerm.mutateAsync(payload)
     setAddModalOpen(false)
+  }
+
+  if (authStatus === 'loading') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <span className="text-gray-400 text-sm">Loading…</span>
+      </div>
+    )
   }
 
   return (
