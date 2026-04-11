@@ -14,6 +14,8 @@ Before going live, verify each of these:
 - [ ] Database credentials are strong and not the defaults
 - [ ] The Lingo container is not exposing port 5432 (Postgres) to the public internet
 - [ ] `LINGO_MCP_BEARER_TOKEN` is set if you're using the MCP endpoint
+- [ ] `LINGO_SLACK_CLIENT_ID` is set (required for web UI login)
+- [ ] `LINGO_SLACK_CLIENT_SECRET` is set (required for web UI login)
 - [ ] TLS/HTTPS is terminated at a reverse proxy (nginx, Caddy, etc.) in front of Lingo
 
 ---
@@ -55,19 +57,27 @@ docker run -d -p 8000:8000 \
 
 ---
 
-## OIDC / SSO
+## Slack Auth
 
-Configure OIDC to let users authenticate with your existing identity provider (Google Workspace, Okta, Entra ID, etc.):
+Lingo uses **Sign in with Slack** for web UI authentication. Set up a Slack app before going live:
+
+1. Create or open your Slack app at [https://api.slack.com/apps](https://api.slack.com/apps)
+2. Under **OAuth & Permissions**, add a redirect URI:
+   `https://<your-domain>/auth/slack/callback`
+3. Under **OAuth & Permissions → OpenID Connect Scopes**, add: `openid`, `email`, `profile`
+4. Copy **Client ID** and **Client Secret** from **Basic Information**
+
+Set the credentials as environment variables:
 
 ```bash
-LINGO_OIDC_DISCOVERY_URL=https://accounts.google.com/.well-known/openid-configuration
-LINGO_OIDC_CLIENT_ID=your-client-id.apps.googleusercontent.com
-LINGO_OIDC_CLIENT_SECRET=your-client-secret
+LINGO_SLACK_CLIENT_ID=your-client-id
+LINGO_SLACK_CLIENT_SECRET=your-client-secret
 ```
 
-When `LINGO_OIDC_DISCOVERY_URL` is set, Lingo validates tokens against the OIDC provider. JWT validation using `LINGO_SECRET_KEY` is used as a fallback.
+!!! note
+    Bot scopes (`commands`, `chat:write`) and Sign in with Slack (`openid`) are separate flows on the same Slack app. Both can coexist in one app configuration.
 
-See your identity provider's documentation for how to create an OIDC client and retrieve these values.
+    Users without Slack can still access Lingo via the CLI or MCP endpoint using API tokens.
 
 ---
 

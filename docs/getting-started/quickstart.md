@@ -13,7 +13,7 @@ docker-compose up
 Wait for the log line `Application startup complete.` The server is now at `http://localhost:8000`.
 
 !!! note "Dev mode"
-    The Docker Compose file sets `LINGO_DEV_MODE=true`. This disables authentication so you can explore without configuring OIDC or creating tokens. Never enable dev mode in production.
+    The Docker Compose file sets `LINGO_DEV_MODE=true`. This disables Slack authentication so you can explore without configuring a Slack app. To log in to the web UI, visit `http://localhost:8000/auth/dev/login?email=you@example.com`. Never enable dev mode in production.
 
 ---
 
@@ -95,4 +95,4 @@ Set `LINGO_MCP_BEARER_TOKEN=your-mcp-token` in your environment and restart the 
 
 - [Configuration](configuration.md) — all `LINGO_*` environment variables
 - [Slack Bot](../usage/slack-bot.md) — add and look up terms from Slack
-- [Deployment](../deployment/docker.md) — run in production with real auth
+- [Deployment](../deployment/docker.md) — run in production with Slack auth

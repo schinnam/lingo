@@ -11,7 +11,7 @@ Teams grow and accumulate jargon fast. Lingo is where you put it. Add a term fro
 - **Web UI** — searchable term browser with status filters, vote / dispute actions, and a slide-in detail panel
 - **Slack bot** — `/lingo define`, `/lingo add`, `/lingo vote`, `/lingo export` commands
 - **CLI** — `lingo define`, `lingo add`, `lingo list`, `lingo export`
-- **REST API** — full CRUD at `/api/v1/terms` with JWT / OIDC auth
+- **REST API** — full CRUD at `/api/v1/terms` with Slack OAuth + JWT auth
 - **MCP server** — `get_term`, `search_terms`, `list_terms` tools for Claude and other MCP-aware agents
 - **Auto-discovery** — daily job scans Slack for unknown acronyms and creates `suggested` terms
 - **Staleness tracking** — weekly job DMs term owners when a term hasn't been confirmed in 180 days
@@ -30,7 +30,7 @@ cd lingo
 docker-compose up
 ```
 
-The server starts at `http://localhost:8000`. Dev mode is on by default in the compose file, so no auth is required.
+The server starts at `http://localhost:8000`. Dev mode is on by default in the compose file — visit `http://localhost:8000/auth/dev/login?email=you@example.com` to log in without Slack.
 
 Open `http://localhost:8000` to see the web UI.
 
@@ -90,9 +90,8 @@ All settings use the `LINGO_` prefix. Set them via environment variables or a `.
 | `LINGO_DATABASE_URL` | `postgresql+asyncpg://lingo:lingo@localhost:5432/lingo` | Postgres connection string |
 | `LINGO_DEV_MODE` | `false` | Enables `X-User-Id` header auth (dev only — never in production) |
 | `LINGO_SECRET_KEY` | `change-me-in-production` | JWT signing key |
-| `LINGO_OIDC_CLIENT_ID` | `""` | OIDC client ID for SSO |
-| `LINGO_OIDC_CLIENT_SECRET` | `""` | OIDC client secret |
-| `LINGO_OIDC_DISCOVERY_URL` | `""` | OIDC discovery endpoint |
+| `LINGO_SLACK_CLIENT_ID` | `""` | Slack app Client ID (required for web UI login) |
+| `LINGO_SLACK_CLIENT_SECRET` | `""` | Slack app Client Secret |
 | `LINGO_SLACK_BOT_TOKEN` | `""` | Slack bot token (Socket Mode) |
 | `LINGO_SLACK_APP_TOKEN` | `""` | Slack app-level token |
 | `LINGO_SLACK_SIGNING_SECRET` | `""` | Slack signing secret |
@@ -101,6 +100,19 @@ All settings use the `LINGO_` prefix. Set them via environment variables or a `.
 | `LINGO_OFFICIAL_THRESHOLD` | `10` | Votes needed for editor to mark `community` → `official` |
 | `LINGO_STALE_THRESHOLD_DAYS` | `180` | Days since last confirmation before a term is flagged stale |
 | `LINGO_APP_URL` | `http://localhost:8000` | Public base URL (used by Slack notifications) |
+
+> **Note:** The web UI requires Slack for login. Users without Slack can still use the CLI and MCP endpoint via API tokens.
+
+### Slack App Setup
+
+To enable web UI login, create a Slack app and configure OAuth:
+
+1. Go to [https://api.slack.com/apps](https://api.slack.com/apps) and create or open your Slack app
+2. Under **OAuth & Permissions**, add a redirect URI: `https://<your-domain>/auth/slack/callback`
+3. Under **OAuth & Permissions → OpenID Connect Scopes**, add: `openid`, `email`, `profile`
+4. Copy **Client ID** and **Client Secret** from **Basic Information** and set `LINGO_SLACK_CLIENT_ID` and `LINGO_SLACK_CLIENT_SECRET`
+
+Bot scopes (`commands`, `chat:write`) and Sign in with Slack (`openid`) are separate flows that coexist in the same Slack app.
 
 ---
 
@@ -214,7 +226,7 @@ npm test
 
 ## Production deployment
 
-Use the Docker image. Set `LINGO_DEV_MODE=false` and provide real values for `LINGO_SECRET_KEY` and your OIDC settings. The scheduler requires `--workers 1` (APScheduler runs in-process).
+Use the Docker image. Set `LINGO_DEV_MODE=false` and provide real values for `LINGO_SECRET_KEY`, `LINGO_SLACK_CLIENT_ID`, and `LINGO_SLACK_CLIENT_SECRET`. The scheduler requires `--workers 1` (APScheduler runs in-process).
 
 ```bash
 docker build -t lingo .

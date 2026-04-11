@@ -24,7 +24,7 @@ uv run alembic upgrade head
 LINGO_DEV_MODE=true uv run uvicorn lingo.main:app --reload
 ```
 
-Server: `http://localhost:8000` — `LINGO_DEV_MODE=true` disables auth so you can test without OIDC.
+Server: `http://localhost:8000` — `LINGO_DEV_MODE=true` disables Slack auth so you can test locally. Log in via `http://localhost:8000/auth/dev/login?email=you@example.com` instead of going through Slack.
 
 **Frontend development** — two modes:
 

@@ -22,15 +22,20 @@ All settings use the `LINGO_` prefix. Set them as environment variables or in a 
 
 ---
 
-## Authentication (OIDC / SSO)
+## Slack OAuth
 
 | Variable | Default | Description |
 |---|---|---|
-| `LINGO_OIDC_DISCOVERY_URL` | `""` | OIDC discovery endpoint (e.g. `https://accounts.google.com/.well-known/openid-configuration`). If set, OIDC validation is enabled. |
-| `LINGO_OIDC_CLIENT_ID` | `""` | OIDC client ID from your identity provider. |
-| `LINGO_OIDC_CLIENT_SECRET` | `""` | OIDC client secret. |
+| `LINGO_SLACK_CLIENT_ID` | `""` | Client ID from your Slack app's **Basic Information** page. Required for web UI login. |
+| `LINGO_SLACK_CLIENT_SECRET` | `""` | Client Secret from your Slack app's **Basic Information** page. |
 
-When `LINGO_OIDC_DISCOVERY_URL` is provided, Lingo validates tokens against the OIDC provider. If not set, it falls back to JWT validation using `LINGO_SECRET_KEY`.
+The web UI uses **Sign in with Slack** for authentication. See [Production Deployment](../deployment/production.md) for Slack app setup steps.
+
+!!! tip "Dev mode login"
+    When `LINGO_DEV_MODE=true`, you can log in without Slack by visiting:
+    `http://localhost:8000/auth/dev/login?email=you@example.com`
+
+    Users without Slack can always authenticate via CLI or MCP using API tokens — only the web UI requires Slack.
 
 ---
 
@@ -75,12 +80,11 @@ LINGO_SECRET_KEY=a-very-long-random-string-change-me
 LINGO_APP_URL=https://lingo.example.com
 LINGO_DEV_MODE=false
 
-# OIDC (optional)
-LINGO_OIDC_DISCOVERY_URL=https://accounts.google.com/.well-known/openid-configuration
-LINGO_OIDC_CLIENT_ID=your-client-id
-LINGO_OIDC_CLIENT_SECRET=your-client-secret
+# Slack OAuth (required for web UI login)
+LINGO_SLACK_CLIENT_ID=your-slack-client-id
+LINGO_SLACK_CLIENT_SECRET=your-slack-client-secret
 
-# Slack (optional)
+# Slack bot (optional)
 LINGO_SLACK_BOT_TOKEN=xoxb-...
 LINGO_SLACK_APP_TOKEN=xapp-...
 LINGO_SLACK_SIGNING_SECRET=...

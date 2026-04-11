@@ -83,6 +83,8 @@ services:
     environment:
       LINGO_DEV_MODE: "false"
       LINGO_SECRET_KEY: "local-dev-secret"
+      # LINGO_SLACK_CLIENT_ID: "your-slack-client-id"
+      # LINGO_SLACK_CLIENT_SECRET: "your-slack-client-secret"
       LINGO_SLACK_BOT_TOKEN: "xoxb-..."
 ```
 
@@ -100,5 +102,5 @@ Returns `{"status": "ok"}` when the server is running.
 
 ## Next steps
 
-- [Production deployment](production.md) — security checklist, OIDC, scaling
+- [Production deployment](production.md) — security checklist, Slack auth, scaling
 - [Configuration](../getting-started/configuration.md) — all environment variables
