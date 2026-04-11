@@ -44,9 +44,10 @@ export function useVoteTerm() {
 export function useDisputeTerm() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (id: string) => disputeTerm(id),
-    onSuccess: (_data, id) => {
+    mutationFn: ({ id, comment }: { id: string; comment?: string }) => disputeTerm(id, comment),
+    onSuccess: (_data, { id }) => {
       qc.invalidateQueries({ queryKey: ['term', id] })
+      qc.invalidateQueries({ queryKey: ['terms'] })
     },
   })
 }

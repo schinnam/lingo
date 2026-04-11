@@ -153,7 +153,7 @@ function AppInner() {
               features={features}
               onClose={() => setSelectedId(null)}
               onVote={(id) => voteTerm.mutate(id)}
-              onDispute={(id) => disputeTerm.mutate(id)}
+              onDispute={(id, comment) => disputeTerm.mutate({ id, comment })}
             />
           </aside>
         )}

@@ -178,6 +178,27 @@ class TermService:
         await self._session.refresh(term)
         return term
 
+    async def dispute(self, term_id: UUID, by_user: UUID, comment: str = "") -> Term:
+        term = await self._session.get(Term, term_id)
+        if term is None:
+            raise TermNotFoundError(f"Term {term_id} not found")
+        change_note = f"Disputed: {comment}" if comment else "Disputed by user"
+        snapshot = TermHistory(
+            term_id=term.id,
+            definition=term.definition,
+            full_name=term.full_name,
+            category=term.category,
+            owner_id=term.owner_id,
+            status=term.status,
+            changed_by=by_user,
+            change_note=change_note,
+        )
+        self._session.add(snapshot)
+        term.is_disputed = True
+        await self._session.commit()
+        await self._session.refresh(term)
+        return term
+
     async def claim(self, term_id: UUID, user_id: UUID, force: bool = False) -> Term:
         term = await self._session.get(Term, term_id)
         if term is None:

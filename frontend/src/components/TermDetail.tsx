@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { TermDetail as TermDetailType } from '../types'
 import type { Features } from '../api/features'
 import { StatusBadge } from './StatusBadge'
@@ -7,10 +8,19 @@ interface TermDetailProps {
   features: Features
   onClose: () => void
   onVote: (id: string) => void
-  onDispute: (id: string) => void
+  onDispute: (id: string, comment?: string) => void
 }
 
 export function TermDetail({ term, features, onClose, onVote, onDispute }: TermDetailProps) {
+  const [disputeOpen, setDisputeOpen] = useState(false)
+  const [comment, setComment] = useState('')
+
+  function handleDisputeSubmit() {
+    onDispute(term.id, comment.trim() || undefined)
+    setDisputeOpen(false)
+    setComment('')
+  }
+
   return (
     <div
       role="dialog"
@@ -63,21 +73,56 @@ export function TermDetail({ term, features, onClose, onVote, onDispute }: TermD
       )}
 
       {features.voting && (
-        <div className="flex gap-2 mt-auto pt-4 border-t border-gray-100">
-          <button
-            onClick={() => onVote(term.id)}
-            aria-label="Vote for this term"
-            className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
-          >
-            👍 Vote
-          </button>
-          <button
-            onClick={() => onDispute(term.id)}
-            aria-label="Dispute this term"
-            className="flex-1 px-3 py-2 border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 transition-colors"
-          >
-            ⚑ Dispute
-          </button>
+        <div className="mt-auto pt-4 border-t border-gray-100">
+          {disputeOpen ? (
+            <div className="flex flex-col gap-2">
+              <label htmlFor="dispute-comment" className="text-xs text-gray-600 font-medium">
+                Add a comment (optional)
+              </label>
+              <textarea
+                id="dispute-comment"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Explain why this definition is incorrect or outdated…"
+                rows={3}
+                maxLength={500}
+                className="w-full text-sm border border-gray-300 rounded-md p-2 resize-none focus:outline-none focus:ring-2 focus:ring-orange-400"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={handleDisputeSubmit}
+                  aria-label="Submit dispute"
+                  className="flex-1 px-3 py-2 bg-orange-500 text-white text-sm rounded-md hover:bg-orange-600 transition-colors"
+                >
+                  Submit Dispute
+                </button>
+                <button
+                  onClick={() => { setDisputeOpen(false); setComment('') }}
+                  aria-label="Cancel dispute"
+                  className="flex-1 px-3 py-2 border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <button
+                onClick={() => onVote(term.id)}
+                aria-label="Vote for this term"
+                className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
+              >
+                👍 Vote
+              </button>
+              <button
+                onClick={() => setDisputeOpen(true)}
+                aria-label="Dispute this term"
+                className="flex-1 px-3 py-2 border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 transition-colors"
+              >
+                ⚑ Dispute
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
