@@ -5,6 +5,7 @@ Commands:
   /lingo add <term> -- <definition>
   /lingo vote <term>
   /lingo export
+  /lingo token [name]
 
 Interactive actions:
   staleness_confirm_<term_id>
@@ -31,6 +32,7 @@ from lingo.slack.handlers import (
     handle_lingo_add,
     handle_lingo_vote,
     handle_lingo_export,
+    handle_lingo_token,
 )
 
 slack_app = AsyncApp(
@@ -93,13 +95,41 @@ async def lingo_command(ack, command, say, client):
             session_factory=SessionFactory,
         )
 
+    elif text == "token" or text.startswith("token "):
+        remainder = text[len("token"):].strip()
+        token_name = remainder if remainder else "Slack CLI token"
+        raw, error = await handle_lingo_token(
+            slack_user_id=slack_user_id,
+            name=token_name,
+            session_factory=SessionFactory,
+        )
+        if error:
+            await client.chat_postEphemeral(
+                channel=channel_id,
+                user=slack_user_id,
+                text=f":x: {error}",
+            )
+        else:
+            await client.chat_postEphemeral(
+                channel=channel_id,
+                user=slack_user_id,
+                text=(
+                    ":key: *Your new Lingo API token* (shown once — save it now):\n"
+                    f"```{raw}```\n"
+                    "*CLI usage:*\n"
+                    f"`export LINGO_API_TOKEN={raw}`\n"
+                    "*MCP usage:* set `LINGO_API_TOKEN` in your MCP server environment."
+                ),
+            )
+
     else:
         await say(
             "*Lingo commands:*\n"
             "• `/lingo define <term>` — look up a term\n"
             "• `/lingo add <term> -- <definition>` — add a new term\n"
             "• `/lingo vote <term>` — vote for a term\n"
-            "• `/lingo export` — download the full glossary"
+            "• `/lingo export` — download the full glossary\n"
+            "• `/lingo token [name]` — generate an API token for CLI/MCP use"
         )
 
 
