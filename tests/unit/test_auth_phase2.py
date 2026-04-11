@@ -268,103 +268,158 @@ class TestAuthMethodPriority:
 
 
 # ---------------------------------------------------------------------------
-# OIDC JWT Bearer Auth
+# Slack OIDC Auth (replaces JWT-based TestOIDCJWTAuth)
 # ---------------------------------------------------------------------------
 
-class TestOIDCJWTAuth:
-    """get_current_user must validate a signed JWT and upsert/resolve a User by email."""
+class TestSlackOIDCAuth:
+    """Slack OIDC callback creates/links users and establishes a session."""
 
-    async def test_valid_jwt_creates_user_if_not_exists(self, client, test_session_factory):
-        """A valid JWT for an unknown email auto-provisions a member User."""
-        from lingo.auth.slack_oidc import make_test_jwt
-
-        token = make_test_jwt(email="newuser@corp.example", name="New User")
-        # POST /api/v1/terms requires CurrentUser (member+)
-        resp = await client.post(
-            "/api/v1/terms",
-            json={"name": "NEWU", "definition": "new user term"},
-            headers={"Authorization": f"Bearer {token}"},
-        )
-        assert resp.status_code == 201
-
-        # User should now exist in DB
+    async def test_new_user_created_on_first_slack_signin(self, client, test_session_factory):
+        """GET /auth/slack/callback creates a new User row on first Sign in with Slack."""
         from sqlalchemy import select
-        from lingo.models import User
+        from lingo.auth.slack_oidc import hmac_sign
+
+        nonce = "test-nonce-newuser"
+        state = hmac_sign(nonce, settings.secret_key)
+
+        with patch("lingo.api.routes.auth.exchange_code", new_callable=AsyncMock) as mock_exc, \
+             patch("lingo.api.routes.auth.get_user_info", new_callable=AsyncMock) as mock_info:
+            mock_exc.return_value = {"access_token": "slack-token"}
+            mock_info.return_value = {
+                "sub": "U123", "email": "new@corp.com", "name": "New User",
+            }
+
+            resp = await client.get(
+                f"/auth/slack/callback?code=abc&state={state}",
+                cookies={"lingo_oauth_state": nonce},
+            )
+
+        assert resp.status_code in (302, 307)
+        assert "session" in resp.cookies
+
         async with test_session_factory() as sess:
             result = await sess.execute(
-                select(User).where(User.email == "newuser@corp.example")
+                select(User).where(User.email == "new@corp.com")
             )
             user = result.scalar_one_or_none()
-            assert user is not None
-            assert user.role == "member"
+        assert user is not None
+        assert user.slack_user_id == "U123"
+        assert user.email == "new@corp.com"
 
-    async def test_valid_jwt_resolves_existing_user(self, client):
-        """A valid JWT for a known email resolves to the existing user."""
-        from lingo.auth.slack_oidc import make_test_jwt
+    async def test_existing_user_gets_slack_user_id_linked(self, client, test_session_factory):
+        """Existing user matched by email gets slack_user_id set; no duplicate row created."""
+        from sqlalchemy import select
+        from lingo.auth.slack_oidc import hmac_sign
 
-        # admin@corp.example is seeded in db_users fixture
-        token = make_test_jwt(email="admin@corp.example", name="Admin")
+        async with test_session_factory() as sess:
+            existing = User(email="existing@corp.com", display_name="Existing", role="member")
+            sess.add(existing)
+            await sess.commit()
+
+        nonce = "test-nonce-existing"
+        state = hmac_sign(nonce, settings.secret_key)
+
+        with patch("lingo.api.routes.auth.exchange_code", new_callable=AsyncMock) as mock_exc, \
+             patch("lingo.api.routes.auth.get_user_info", new_callable=AsyncMock) as mock_info:
+            mock_exc.return_value = {"access_token": "slack-token"}
+            mock_info.return_value = {
+                "sub": "U456", "email": "existing@corp.com", "name": "Existing",
+            }
+
+            resp = await client.get(
+                f"/auth/slack/callback?code=abc&state={state}",
+                cookies={"lingo_oauth_state": nonce},
+            )
+
+        assert resp.status_code in (302, 307)
+
+        async with test_session_factory() as sess:
+            result = await sess.execute(
+                select(User).where(User.email == "existing@corp.com")
+            )
+            users = result.scalars().all()
+        assert len(users) == 1  # no duplicate row
+        assert users[0].slack_user_id == "U456"
+
+    async def test_invalid_state_returns_400(self, client):
+        """Tampered state param triggers CSRF check → 400, no session cookie set."""
         resp = await client.get(
-            _AUTH_ENDPOINT,  # admin-only endpoint
-            headers={"Authorization": f"Bearer {token}"},
+            "/auth/slack/callback?code=abc&state=tampered-value",
+            cookies={"lingo_oauth_state": "test-nonce-csrf"},
         )
-        assert resp.status_code == 200  # admin role preserved
+        assert resp.status_code == 400
+        assert "session" not in resp.cookies
 
-    async def test_expired_jwt_returns_401(self, client):
-        """An expired JWT must return 401."""
-        from lingo.auth.slack_oidc import make_test_jwt
-        import time
-
-        token = make_test_jwt(
-            email="expired@corp.example",
-            name="Expired",
-            exp=int(time.time()) - 3600,  # 1 hour ago
-        )
-        resp = await client.get(
-            _AUTHED_READ,
-            headers={"Authorization": f"Bearer {token}"},
-        )
+    async def test_auth_me_without_and_with_session(self, client):
+        """/auth/me → 401 without session; 200 with session returning user JSON."""
+        # No session → 401
+        resp = await client.get("/auth/me")
         assert resp.status_code == 401
 
-    async def test_invalid_signature_jwt_returns_401(self, client):
-        """A JWT signed with a different key must return 401."""
-        import warnings
-        import jwt as pyjwt
-        import time
-
-        # Sign with a DIFFERENT secret than Lingo's
-        payload = {
-            "email": "hacker@evil.example",
-            "name": "Hacker",
-            "sub": "hacker-sub",
-            "iat": int(time.time()),
-            "exp": int(time.time()) + 3600,
-        }
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", message=".*HMAC key.*below.*minimum.*")
-            evil_token = pyjwt.encode(payload, "wrong-secret", algorithm="HS256")
-        resp = await client.get(
-            _AUTHED_READ,
-            headers={"Authorization": f"Bearer {evil_token}"},
+        # Establish session via dev login (dev_mode=True in client fixture)
+        login_resp = await client.get(
+            f"/auth/dev/login?email={client._member.email}"
         )
-        assert resp.status_code == 401
+        assert login_resp.status_code in (302, 307)
 
-    async def test_jwt_missing_email_claim_returns_401(self, client):
-        """A JWT without an email claim must return 401."""
-        import jwt as pyjwt
-        import time
-        from lingo.config import settings
+        # Explicitly pass session cookie → 200
+        me_resp = await client.get("/auth/me", cookies=login_resp.cookies)
+        assert me_resp.status_code == 200
+        data = me_resp.json()
+        assert data["email"] == client._member.email
 
-        payload = {
-            "sub": "some-sub",
-            "name": "No Email",
-            "iat": int(time.time()),
-            "exp": int(time.time()) + 3600,
-        }
-        from lingo.auth.slack_oidc import _derive_signing_key
-        token = pyjwt.encode(payload, _derive_signing_key(settings.secret_key), algorithm="HS256")
-        resp = await client.get(
-            _AUTHED_READ,
-            headers={"Authorization": f"Bearer {token}"},
+
+# ---------------------------------------------------------------------------
+# API Token Ownership
+# ---------------------------------------------------------------------------
+
+class TestAPITokenOwnership:
+    """Non-admin users can create/delete their own tokens; cannot delete others'."""
+
+    async def test_member_token_crud_and_cross_user_forbidden(self, client, test_session_factory):
+        """Member: POST /tokens → 201; DELETE own → 204; DELETE admin's token → 403."""
+        # Establish member session via dev login
+        login_resp = await client.get(
+            f"/auth/dev/login?email={client._member.email}"
         )
-        assert resp.status_code == 401
+        assert login_resp.status_code in (302, 307)
+        member_cookies = dict(login_resp.cookies)
+
+        # Create token as member → 201, user_id matches member
+        create_resp = await client.post(
+            "/api/v1/tokens",
+            json={"name": "member-token", "scopes": ["read"]},
+            cookies=member_cookies,
+        )
+        assert create_resp.status_code == 201
+        token_data = create_resp.json()
+        assert token_data["user_id"] == client._member_id
+        member_token_id = token_data["id"]
+
+        # Seed an admin token directly in the DB (no auth flow needed)
+        _, admin_token_hash = _make_api_token()
+        async with test_session_factory() as sess:
+            admin_tok = Token(
+                user_id=client._admin.id,
+                name="admin-token",
+                token_hash=admin_token_hash,
+                scopes=["read"],
+            )
+            sess.add(admin_tok)
+            await sess.commit()
+            await sess.refresh(admin_tok)
+            admin_token_id = str(admin_tok.id)
+
+        # Member cannot delete admin's token → 403
+        del_other_resp = await client.delete(
+            f"/api/v1/tokens/{admin_token_id}",
+            cookies=member_cookies,
+        )
+        assert del_other_resp.status_code == 403
+
+        # Member can delete own token → 204
+        del_own_resp = await client.delete(
+            f"/api/v1/tokens/{member_token_id}",
+            cookies=member_cookies,
+        )
+        assert del_own_resp.status_code == 204
