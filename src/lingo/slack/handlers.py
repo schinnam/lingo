@@ -5,11 +5,15 @@ can be tested in isolation without a real Slack connection.
 """
 from __future__ import annotations
 
+import base64
+import hashlib
+import os
 from typing import Callable
 
 from sqlalchemy import select
 
 from lingo.models.term import Term
+from lingo.models.token import Token
 from lingo.models.user import User
 from lingo.services.term_service import TermService
 from lingo.services.vote_service import AlreadyVotedError, VoteService
@@ -172,3 +176,36 @@ async def handle_lingo_export(
         content=content,
         title="Lingo Glossary Export",
     )
+
+
+async def handle_lingo_token(
+    *,
+    slack_user_id: str,
+    name: str,
+    session_factory,
+) -> tuple[str | None, str | None]:
+    """Generate an API token for the Lingo account linked to this Slack user.
+
+    Returns (raw_token, error_message). Exactly one will be non-None.
+    The raw token is shown once and never stored — only its sha256 hash is saved.
+    """
+    async with session_factory() as session:
+        user = await resolve_slack_user(slack_user_id, session)
+        if user is None:
+            return None, (
+                "Your Slack account is not linked to a Lingo account. "
+                "Please sign in at your Lingo instance first."
+            )
+
+        raw = base64.urlsafe_b64encode(os.urandom(32)).decode("ascii").rstrip("=")
+        token_hash = hashlib.sha256(raw.encode()).hexdigest()
+        token = Token(
+            user_id=user.id,
+            name=name,
+            token_hash=token_hash,
+            scopes=["read"],
+        )
+        session.add(token)
+        await session.commit()
+
+    return raw, None
