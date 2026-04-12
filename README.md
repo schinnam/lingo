@@ -1,5 +1,7 @@
 # Lingo
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 Self-hosted company glossary. Slack, CLI, web UI, and AI agents — all from one service.
 
 Teams grow and accumulate jargon fast. Lingo is where you put it. Add a term from Slack, vote it up, and AI agents can look it up via MCP. Stale terms get a nudge. The whole thing runs on Postgres.
@@ -272,3 +274,9 @@ Key endpoints:
 ## Architecture
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for a full breakdown of the component structure, data model, and design decisions.
+
+---
+
+## License
+
+[MIT](LICENSE)
