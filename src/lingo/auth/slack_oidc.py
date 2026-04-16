@@ -185,7 +185,7 @@ async def upsert_user(
 
 
 def _derive_signing_key(secret: str) -> bytes:
-    """Derive a 32-byte key from the secret to satisfy HMAC-SHA256 minimum length (RFC 7518 §3.2)."""
+    """Derive a 32-byte signing key from secret (satisfies RFC 7518 §3.2 HMAC-SHA256 min length)."""
     return hashlib.sha256(secret.encode()).digest()
 
 
