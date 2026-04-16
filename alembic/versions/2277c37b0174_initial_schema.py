@@ -66,9 +66,9 @@ def upgrade() -> None:
     )
     op.create_table('tokens',
     sa.Column('id', sa.Uuid(), nullable=False),
-    sa.Column('user_id', sa.Uuid(), nullable=True),
+    sa.Column('user_id', sa.Uuid(), nullable=False),
     sa.Column('name', sa.String(), nullable=True),
-    sa.Column('token_hash', sa.String(), nullable=True),
+    sa.Column('token_hash', sa.String(), nullable=False),
     sa.Column('scopes', sa.JSON(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
     sa.Column('last_used_at', sa.DateTime(timezone=True), nullable=True),

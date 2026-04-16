@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Optional
+from uuid import UUID
 
 from sqlalchemy import DateTime, ForeignKey, JSON, String, func
 from sqlalchemy.orm import Mapped, mapped_column
@@ -11,11 +12,11 @@ class Token(Base):
     __tablename__ = "tokens"
 
     id: Mapped[object] = uuid_pk()
-    user_id: Mapped[Optional[object]] = mapped_column(
-        ForeignKey("users.id"), nullable=True
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id"), nullable=False
     )
     name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    token_hash: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    token_hash: Mapped[str] = mapped_column(String, nullable=False)
     scopes: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
     created_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=True
