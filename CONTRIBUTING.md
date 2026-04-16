@@ -93,6 +93,39 @@ Follow red/green TDD: write a failing test first, then implement. PRs without te
 
 Always write both `upgrade()` and `downgrade()` in migrations. Missing `downgrade()` that drops enum types causes "type already exists" errors on re-upgrade — see CHANGELOG for prior incident.
 
+## Making Database Schema Changes
+
+If you modify any SQLAlchemy model in `src/lingo/models/`, you must generate
+a migration script:
+
+1. Make your model changes
+2. Generate the migration:
+   ```bash
+   uv run alembic revision --autogenerate -m "describe your change"
+   ```
+3. Review the generated file in `alembic/versions/` — autogenerate is not perfect
+4. Test the migration applies cleanly:
+   ```bash
+   uv run alembic upgrade head
+   ```
+5. Commit both the model change and the migration file together
+
+Always write both `upgrade()` and `downgrade()` in migrations. Missing `downgrade()` that drops enum types causes "type already exists" errors on re-upgrade.
+
+## Frontend Changes
+
+The frontend (React/TypeScript) lives in `frontend/` and is served as static
+files by FastAPI from `src/lingo/static/`.
+
+After making frontend changes, rebuild before committing:
+
+```bash
+cd frontend && npm run build
+```
+
+The built assets in `src/lingo/static/` must be committed alongside source changes.
+Run `npm run dev` for hot-reload during development (proxies API calls to `localhost:8000`).
+
 ## Releasing a New Version
 
 Lingo exposes multiple versioned surfaces — the REST API (`/api/v1/`), Slack command syntax, and MCP tool definitions. A breaking change to any of them warrants a major version bump.
