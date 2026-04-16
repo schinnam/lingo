@@ -1,0 +1,28 @@
+# CodeQL is intentionally disabled. To enable, uncomment the push/pull_request/schedule
+# triggers below and remove the workflow_dispatch-only block.
+name: CodeQL
+
+on:
+  workflow_dispatch: # manual trigger only — remove to enable on push/PR/schedule
+  # push:
+  #   branches: [main]
+  # pull_request:
+  # schedule:
+  #   - cron: '0 0 * * 0'  # weekly on Sunday midnight
+
+jobs:
+  analyze:
+    name: Analyze (python)
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: python
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
