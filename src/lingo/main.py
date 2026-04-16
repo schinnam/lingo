@@ -86,15 +86,16 @@ _static_dir = Path(__file__).parent / "static"
 if _static_dir.exists() and any(_static_dir.iterdir()):
     app.mount("/assets", StaticFiles(directory=_static_dir / "assets"), name="assets")
 
+    _index = _static_dir / "index.html"
+    _index_html: str | None = _index.read_text() if _index.exists() else None
+    if _index_html and settings.dev_mode:
+        _index_html = _index_html.replace(
+            "<!-- lingo:dev-meta -->",
+            '<meta name="lingo-dev-mode" content="true">',
+        )
+
     @app.get("/{full_path:path}", include_in_schema=False)
     async def spa_fallback(full_path: str):  # noqa: ARG001
-        index = _static_dir / "index.html"
-        if not index.exists():
+        if _index_html is None:
             return {"detail": "Frontend not built. Run `npm run build` in the frontend/ directory."}
-        html = index.read_text()
-        if settings.dev_mode:
-            html = html.replace(
-                "</head>",
-                '<meta name="lingo-dev-mode" content="true"></head>',
-            )
-        return HTMLResponse(content=html)
+        return HTMLResponse(content=_index_html)
