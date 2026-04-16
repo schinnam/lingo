@@ -1,18 +1,19 @@
 """Tests for FastAPI routes using HTTPX async test client."""
+
 import pytest
-from httpx import AsyncClient, ASGITransport
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from lingo.models.base import Base
-from lingo.models import User
-from lingo.main import app
-from lingo.db.session import get_session
 from lingo.config import settings
-
+from lingo.db.session import get_session
+from lingo.main import app
+from lingo.models import User
+from lingo.models.base import Base
 
 # ---------------------------------------------------------------------------
 # Fixtures: in-memory DB wired into the FastAPI app for tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 async def test_engine():
@@ -31,6 +32,7 @@ async def test_session_factory(test_engine):
 @pytest.fixture
 async def client(test_session_factory):
     """FastAPI test client with DB dependency overridden."""
+
     async def _override_get_session():
         async with test_session_factory() as sess:
             yield sess
@@ -46,9 +48,7 @@ async def client(test_session_factory):
         await sess.refresh(admin)
         admin_id = str(admin.id)
 
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as ac:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         ac._admin_id = admin_id  # store for test use
         yield ac
 
@@ -59,6 +59,7 @@ async def client(test_session_factory):
 # ---------------------------------------------------------------------------
 # Health check
 # ---------------------------------------------------------------------------
+
 
 class TestHealthCheck:
     async def test_health_returns_ok(self, client):
@@ -71,6 +72,7 @@ class TestHealthCheck:
 # ---------------------------------------------------------------------------
 # Terms CRUD
 # ---------------------------------------------------------------------------
+
 
 class TestCreateTermAPI:
     async def test_create_term(self, client):
@@ -119,6 +121,7 @@ class TestGetTermAPI:
 
     async def test_get_missing_term_returns_404(self, client):
         import uuid
+
         response = await client.get(f"/api/v1/terms/{uuid.uuid4()}")
         assert response.status_code == 404
 

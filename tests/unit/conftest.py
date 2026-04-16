@@ -1,10 +1,11 @@
 """Shared fixtures for unit tests using async SQLite in-memory DB."""
-import pytest
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 
-from lingo.models.base import Base
-from lingo.models import User, Term  # ensure all models registered
+import pytest
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
 from lingo.config import settings
+from lingo.models import User  # ensure all models registered
+from lingo.models.base import Base
 
 
 @pytest.fixture(autouse=True)

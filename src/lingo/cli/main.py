@@ -6,12 +6,12 @@ Configuration via environment variables:
   LINGO_APP_URL    — base URL of the Lingo server (default: http://localhost:8000)
   LINGO_API_TOKEN  — bearer token for authentication (optional in dev mode)
 """
+
 from __future__ import annotations
 
 import json
 import os
 from pathlib import Path
-from typing import Optional
 
 import httpx
 import typer
@@ -116,8 +116,8 @@ def _print_term(term: dict) -> None:
 def add(
     term: str = typer.Argument(..., help="Term name (e.g. BART)"),
     definition: str = typer.Argument(..., help="Term definition"),
-    full_name: Optional[str] = typer.Option(None, "--full-name", "-f", help="Full expanded name"),
-    category: Optional[str] = typer.Option(None, "--category", "-c", help="Category"),
+    full_name: str | None = typer.Option(None, "--full-name", "-f", help="Full expanded name"),
+    category: str | None = typer.Option(None, "--category", "-c", help="Category"),
 ):
     """Add a new term to the glossary."""
     payload: dict = {"name": term, "definition": definition}
@@ -151,8 +151,8 @@ def add(
 
 @app.command(name="list")
 def list_terms(
-    status: Optional[str] = typer.Option(None, "--status", "-s", help="Filter by status"),
-    category: Optional[str] = typer.Option(None, "--category", "-c", help="Filter by category"),
+    status: str | None = typer.Option(None, "--status", "-s", help="Filter by status"),
+    category: str | None = typer.Option(None, "--category", "-c", help="Filter by category"),
     limit: int = typer.Option(50, "--limit", "-n", help="Max results"),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
 ):
@@ -201,7 +201,7 @@ def list_terms(
 @app.command()
 def export(
     status: str = typer.Option("official", "--status", "-s", help="Status filter"),
-    output: Optional[str] = typer.Option(None, "--output", "-o", help="Output file path"),
+    output: str | None = typer.Option(None, "--output", "-o", help="Output file path"),
 ):
     """Export glossary terms as Markdown."""
     params = {"status": status, "format": "markdown"}

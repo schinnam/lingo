@@ -1,9 +1,9 @@
 """Tests for Phase 2B auth: session cookie routes (/auth/slack/*, /auth/dev/login, /auth/me, /auth/logout)."""
-import uuid
+
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from lingo.auth.slack_oidc import hmac_sign
@@ -13,10 +13,10 @@ from lingo.main import app
 from lingo.models import User
 from lingo.models.base import Base
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 async def test_engine():
@@ -72,6 +72,7 @@ async def client(test_session_factory, db_users):
 # Helper: extract session cookie value from a response
 # ---------------------------------------------------------------------------
 
+
 def _get_session_cookies(response):
     """Return set-cookie headers as dict."""
     return {c.name: c for c in response.cookies.jar}
@@ -80,6 +81,7 @@ def _get_session_cookies(response):
 # ---------------------------------------------------------------------------
 # GET /auth/slack/login
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_slack_login_redirects(client):
@@ -99,6 +101,7 @@ async def test_slack_login_sets_state_cookie(client):
 # ---------------------------------------------------------------------------
 # GET /auth/slack/callback
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_slack_callback_valid(client, db_users):
@@ -152,6 +155,7 @@ async def test_slack_callback_missing_cookie(client):
 # GET /auth/me
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_auth_me_no_session(client):
     c, _ = client
@@ -197,6 +201,7 @@ async def test_auth_me_inactive_user(client, test_session_factory, db_users):
 # POST /auth/logout
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_logout_clears_session(client, db_users):
     c, users = client
@@ -218,6 +223,7 @@ async def test_logout_clears_session(client, db_users):
 # GET /auth/dev/login
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_dev_login_existing_user(client, db_users):
     c, users = client
@@ -237,6 +243,7 @@ async def test_dev_login_creates_new_user(client, test_session_factory):
     # Verify user was created
     async with test_session_factory() as sess:
         from sqlalchemy import select
+
         result = await sess.execute(select(User).where(User.email == new_email))
         user = result.scalar_one_or_none()
     assert user is not None
@@ -258,6 +265,7 @@ async def test_dev_login_disabled_in_production(client):
 # ---------------------------------------------------------------------------
 # Session cookie as priority-2 auth in get_current_user (deps.py)
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_session_cookie_auth_via_api_endpoint(client, db_users):

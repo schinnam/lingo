@@ -3,6 +3,7 @@
 Validates against the Token table using the same sha256-hash lookup
 used by the REST API bearer auth. Returns 401 JSON on failure.
 """
+
 import hashlib
 import json
 
@@ -45,8 +46,9 @@ class MCPBearerAuthMiddleware:
     @staticmethod
     async def _is_valid_token(raw_token: str) -> bool:
         from sqlalchemy import select
-        from lingo.models.token import Token
+
         from lingo.models import User
+        from lingo.models.token import Token
 
         token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
         async with SessionFactory() as session:

@@ -1,5 +1,4 @@
 """Integration tests for /api/v1/terms — hits a real Postgres database."""
-import pytest
 
 
 class TestCreateTerm:

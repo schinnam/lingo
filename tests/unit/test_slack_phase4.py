@@ -7,28 +7,27 @@ Strategy:
     tested by calling them directly and asserting the right Slack API calls.
   - No real Slack connection needed — fully in-memory with SQLite.
 """
+
 from __future__ import annotations
 
-import io
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from lingo.models import User, Term
+from lingo.models import Term, User
 from lingo.models.base import Base
 from lingo.slack.handlers import (
-    handle_lingo_define,
     handle_lingo_add,
-    handle_lingo_vote,
+    handle_lingo_define,
     handle_lingo_export,
+    handle_lingo_vote,
 )
 from lingo.slack.notifications import (
     send_dispute_dm,
     send_promotion_notification,
     send_staleness_dm,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -148,9 +147,8 @@ class TestLingoAdd:
         # Confirm it was persisted
         async with factory() as sess:
             from sqlalchemy import select
-            result = await sess.execute(
-                select(Term).where(Term.name == "SLA")
-            )
+
+            result = await sess.execute(select(Term).where(Term.name == "SLA"))
             term = result.scalar_one_or_none()
         assert term is not None
         assert term.status == "pending"
@@ -186,6 +184,7 @@ class TestLingoAdd:
         # Term must NOT have been created
         async with factory() as sess:
             from sqlalchemy import select
+
             result = await sess.execute(select(Term).where(Term.name == "KPI"))
             term = result.scalar_one_or_none()
         assert term is None
@@ -288,7 +287,6 @@ class TestDisputeDM:
         official = seeded["official"]
         # Wire owner_id
         async with factory() as sess:
-            from sqlalchemy import select
             t = await sess.get(Term, official.id)
             t.owner_id = owner.id
             await sess.commit()

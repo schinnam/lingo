@@ -37,10 +37,10 @@ class Settings(BaseSettings):
 
     # Feature flags — set via env vars, e.g. LINGO_FEATURE_VOTING=false
     # Defaults to a simple experience suitable for small teams.
-    feature_discovery: bool = False    # Slack auto-discovery job
+    feature_discovery: bool = False  # Slack auto-discovery job
     feature_relationships: bool = False  # Term relationship linking
-    feature_voting: bool = True          # Voting & status pipeline
-    feature_staleness: bool = False      # Staleness checks & notifications
+    feature_voting: bool = True  # Voting & status pipeline
+    feature_staleness: bool = False  # Staleness checks & notifications
 
     @model_validator(mode="after")
     def check_secret_key(self):

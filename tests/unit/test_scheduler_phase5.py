@@ -5,10 +5,11 @@ Strategy:
   - No real APScheduler instance needed — we just test the job logic itself.
   - Scheduler setup tested by verifying it exposes the right interface.
 """
+
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import UTC, datetime, timedelta
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from sqlalchemy import select
@@ -17,7 +18,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from lingo.models import Term, User
 from lingo.models.base import Base
 from lingo.models.job import Job, JobStatus, JobType
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -60,7 +60,7 @@ async def seeded(factory):
             status="official",
             source="user",
             owner_id=owner.id,
-            last_confirmed_at=datetime.now(timezone.utc),
+            last_confirmed_at=datetime.now(UTC),
         )
         # A stale official term (last confirmed 200 days ago)
         stale = Term(
@@ -69,7 +69,7 @@ async def seeded(factory):
             status="official",
             source="user",
             owner_id=owner.id,
-            last_confirmed_at=datetime.now(timezone.utc) - timedelta(days=200),
+            last_confirmed_at=datetime.now(UTC) - timedelta(days=200),
         )
         # A pending term with no owner
         pending_no_owner = Term(
@@ -101,18 +101,22 @@ class TestSchedulerSetup:
     def test_scheduler_module_exposes_create_scheduler(self):
         """The scheduler module must export a create_scheduler function."""
         from lingo.scheduler.setup import create_scheduler
+
         assert callable(create_scheduler)
 
     def test_create_scheduler_returns_asyncio_scheduler(self):
         """create_scheduler() must return an APScheduler AsyncIOScheduler."""
         from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
         from lingo.scheduler.setup import create_scheduler
+
         scheduler = create_scheduler(session_factory=MagicMock(), slack_client=MagicMock())
         assert isinstance(scheduler, AsyncIOScheduler)
 
     def test_scheduler_has_discovery_job(self):
         """The scheduler must include a discovery job."""
         from lingo.scheduler.setup import create_scheduler
+
         scheduler = create_scheduler(session_factory=MagicMock(), slack_client=MagicMock())
         job_ids = [job.id for job in scheduler.get_jobs()]
         assert any("discovery" in jid for jid in job_ids)
@@ -120,6 +124,7 @@ class TestSchedulerSetup:
     def test_scheduler_has_staleness_job(self):
         """The scheduler must include a staleness job."""
         from lingo.scheduler.setup import create_scheduler
+
         scheduler = create_scheduler(session_factory=MagicMock(), slack_client=MagicMock())
         job_ids = [job.id for job in scheduler.get_jobs()]
         assert any("staleness" in jid for jid in job_ids)
@@ -162,10 +167,7 @@ class TestLingoStalenessJob:
 
         # Should have DM'd the owner at least once (for KPI)
         slack_client.chat_postMessage.assert_called()
-        channels = [
-            call.kwargs["channel"]
-            for call in slack_client.chat_postMessage.call_args_list
-        ]
+        channels = [call.kwargs["channel"] for call in slack_client.chat_postMessage.call_args_list]
         assert seeded["owner"].slack_user_id in channels
 
     async def test_skips_terms_with_no_owner(self, factory, seeded):
@@ -175,7 +177,7 @@ class TestLingoStalenessJob:
         # Make pending_no_owner also old so it would be flagged
         async with factory() as sess:
             t = await sess.get(Term, seeded["pending_no_owner"].id)
-            t.last_confirmed_at = datetime.now(timezone.utc) - timedelta(days=200)
+            t.last_confirmed_at = datetime.now(UTC) - timedelta(days=200)
             await sess.commit()
 
         slack_client = AsyncMock()
@@ -221,9 +223,7 @@ class TestLingoStalenessJob:
         )
 
         async with factory() as sess:
-            result = await sess.execute(
-                select(Job).where(Job.job_type == JobType.staleness)
-            )
+            result = await sess.execute(select(Job).where(Job.job_type == JobType.staleness))
             job = result.scalar_one_or_none()
 
         assert job is not None
@@ -246,9 +246,7 @@ class TestLingoStalenessJob:
         )
 
         async with factory() as sess:
-            result = await sess.execute(
-                select(Job).where(Job.job_type == JobType.staleness)
-            )
+            result = await sess.execute(select(Job).where(Job.job_type == JobType.staleness))
             job = result.scalar_one_or_none()
 
         assert job is not None
@@ -273,7 +271,9 @@ class TestLingoDiscoveryJob:
             "response_metadata": {"next_cursor": ""},
         }
         slack_client.conversations_history.return_value = {
-            "messages": [{"text": "We need to update the SLO metrics ASAP.", "ts": "1234567890.000000"}],
+            "messages": [
+                {"text": "We need to update the SLO metrics ASAP.", "ts": "1234567890.000000"}
+            ],
             "has_more": False,
         }
 
@@ -284,9 +284,7 @@ class TestLingoDiscoveryJob:
         )
 
         async with factory() as sess:
-            result = await sess.execute(
-                select(Term).where(Term.name == "SLO")
-            )
+            result = await sess.execute(select(Term).where(Term.name == "SLO"))
             term = result.scalar_one_or_none()
 
         assert term is not None
@@ -395,9 +393,7 @@ class TestLingoDiscoveryJob:
         )
 
         async with factory() as sess:
-            result = await sess.execute(
-                select(Job).where(Job.job_type == JobType.discovery)
-            )
+            result = await sess.execute(select(Job).where(Job.job_type == JobType.discovery))
             job = result.scalar_one_or_none()
 
         assert job is not None
@@ -424,9 +420,7 @@ class TestLingoDiscoveryJob:
         )
 
         async with factory() as sess:
-            result = await sess.execute(
-                select(Job).where(Job.job_type == JobType.discovery)
-            )
+            result = await sess.execute(select(Job).where(Job.job_type == JobType.discovery))
             job = result.scalar_one_or_none()
 
         assert job.progress_json is not None
@@ -447,9 +441,7 @@ class TestLingoDiscoveryJob:
         )
 
         async with factory() as sess:
-            result = await sess.execute(
-                select(Job).where(Job.job_type == JobType.discovery)
-            )
+            result = await sess.execute(select(Job).where(Job.job_type == JobType.discovery))
             job = result.scalar_one_or_none()
 
         assert job is not None

@@ -3,24 +3,22 @@
 These tests verify model structure, constraints, and defaults
 without a live database — we inspect the ORM metadata.
 """
-import uuid
-import pytest
-from sqlalchemy import inspect, text
+
 from sqlalchemy.orm import DeclarativeBase
 
 from lingo.models.base import Base
-from lingo.models.user import User
+from lingo.models.job import Job, JobStatus, JobType
 from lingo.models.term import Term
-from lingo.models.vote import Vote
-from lingo.models.token import Token
 from lingo.models.term_history import TermHistory
-from lingo.models.term_relationship import TermRelationship, RelationshipType
-from lingo.models.job import Job, JobType, JobStatus
-
+from lingo.models.term_relationship import RelationshipType, TermRelationship
+from lingo.models.token import Token
+from lingo.models.user import User
+from lingo.models.vote import Vote
 
 # ---------------------------------------------------------------------------
 # Base
 # ---------------------------------------------------------------------------
+
 
 class TestBase:
     def test_base_is_declarative(self):
@@ -31,14 +29,23 @@ class TestBase:
 # User
 # ---------------------------------------------------------------------------
 
+
 class TestUserModel:
     def test_table_name(self):
         assert User.__tablename__ == "users"
 
     def test_columns_exist(self):
         cols = {c.name for c in User.__table__.columns}
-        assert {"id", "email", "display_name", "slack_user_id",
-                "role", "last_login_at", "is_active", "created_at"} <= cols
+        assert {
+            "id",
+            "email",
+            "display_name",
+            "slack_user_id",
+            "role",
+            "last_login_at",
+            "is_active",
+            "created_at",
+        } <= cols
 
     def test_email_unique(self):
         email_col = User.__table__.c["email"]
@@ -53,6 +60,7 @@ class TestUserModel:
     def test_id_is_uuid(self):
         id_col = User.__table__.c["id"]
         from sqlalchemy import Uuid
+
         assert isinstance(id_col.type, Uuid)
 
     def test_instantiation(self):
@@ -66,6 +74,7 @@ class TestUserModel:
 # Term
 # ---------------------------------------------------------------------------
 
+
 class TestTermModel:
     def test_table_name(self):
         assert Term.__tablename__ == "terms"
@@ -73,10 +82,23 @@ class TestTermModel:
     def test_required_columns(self):
         cols = {c.name for c in Term.__table__.columns}
         assert {
-            "id", "name", "full_name", "definition", "category",
-            "status", "source", "source_channel_id", "occurrences_count",
-            "owner_id", "owned_at", "is_stale", "last_confirmed_at",
-            "version", "created_by", "created_at", "updated_at",
+            "id",
+            "name",
+            "full_name",
+            "definition",
+            "category",
+            "status",
+            "source",
+            "source_channel_id",
+            "occurrences_count",
+            "owner_id",
+            "owned_at",
+            "is_stale",
+            "last_confirmed_at",
+            "version",
+            "created_by",
+            "created_at",
+            "updated_at",
         } <= cols
 
     def test_is_stale_default_false(self):
@@ -108,6 +130,7 @@ class TestTermModel:
 # Vote
 # ---------------------------------------------------------------------------
 
+
 class TestVoteModel:
     def test_table_name(self):
         assert Vote.__tablename__ == "votes"
@@ -125,6 +148,7 @@ class TestVoteModel:
 # Token
 # ---------------------------------------------------------------------------
 
+
 class TestTokenModel:
     def test_table_name(self):
         assert Token.__tablename__ == "tokens"
@@ -132,14 +156,21 @@ class TestTokenModel:
     def test_columns_exist(self):
         cols = {c.name for c in Token.__table__.columns}
         assert {
-            "id", "user_id", "name", "token_hash",
-            "scopes", "created_at", "last_used_at", "revoked_at",
+            "id",
+            "user_id",
+            "name",
+            "token_hash",
+            "scopes",
+            "created_at",
+            "last_used_at",
+            "revoked_at",
         } <= cols
 
 
 # ---------------------------------------------------------------------------
 # TermHistory
 # ---------------------------------------------------------------------------
+
 
 class TestTermHistoryModel:
     def test_table_name(self):
@@ -148,8 +179,16 @@ class TestTermHistoryModel:
     def test_columns_exist(self):
         cols = {c.name for c in TermHistory.__table__.columns}
         assert {
-            "id", "term_id", "definition", "full_name", "category",
-            "owner_id", "status", "changed_by", "changed_at", "change_note",
+            "id",
+            "term_id",
+            "definition",
+            "full_name",
+            "category",
+            "owner_id",
+            "status",
+            "changed_by",
+            "changed_at",
+            "change_note",
         } <= cols
 
     def test_change_note_max_length(self):
@@ -161,6 +200,7 @@ class TestTermHistoryModel:
 # TermRelationship
 # ---------------------------------------------------------------------------
 
+
 class TestTermRelationshipModel:
     def test_table_name(self):
         assert TermRelationship.__tablename__ == "term_relationships"
@@ -168,8 +208,12 @@ class TestTermRelationshipModel:
     def test_columns_exist(self):
         cols = {c.name for c in TermRelationship.__table__.columns}
         assert {
-            "id", "term_id", "related_term_id",
-            "relationship_type", "created_by", "created_at",
+            "id",
+            "term_id",
+            "related_term_id",
+            "relationship_type",
+            "created_by",
+            "created_at",
         } <= cols
 
     def test_relationship_type_enum(self):
@@ -184,6 +228,7 @@ class TestTermRelationshipModel:
 # Job
 # ---------------------------------------------------------------------------
 
+
 class TestJobModel:
     def test_table_name(self):
         assert Job.__tablename__ == "jobs"
@@ -191,8 +236,13 @@ class TestJobModel:
     def test_columns_exist(self):
         cols = {c.name for c in Job.__table__.columns}
         assert {
-            "id", "job_type", "status", "progress_json",
-            "started_at", "completed_at", "error",
+            "id",
+            "job_type",
+            "status",
+            "progress_json",
+            "started_at",
+            "completed_at",
+            "error",
         } <= cols
 
     def test_job_type_enum(self):

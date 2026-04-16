@@ -1,17 +1,14 @@
 """Tests for Phase 7 — Web UI static file serving + SPA fallback."""
-import os
-import tempfile
+
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
-from httpx import AsyncClient, ASGITransport
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from lingo.models.base import Base
-from lingo.models import User
-from lingo.main import app
 from lingo.db.session import get_session
+from lingo.main import app
+from lingo.models.base import Base
 
 
 @pytest.fixture
@@ -31,6 +28,7 @@ async def test_session_factory(test_engine):
 @pytest.fixture
 async def client(test_session_factory):
     """Test client with DB overridden."""
+
     async def _override():
         async with test_session_factory() as sess:
             yield sess
@@ -54,7 +52,9 @@ class TestHealthEndpoint:
 class TestSPAFallback:
     """Test the SPA fallback route that serves index.html for unknown paths."""
 
-    async def test_unknown_path_returns_json_or_html_when_no_static_built(self, client: AsyncClient):
+    async def test_unknown_path_returns_json_or_html_when_no_static_built(
+        self, client: AsyncClient
+    ):
         """Without a built frontend, unknown paths return 200 JSON hint or 404."""
         resp = await client.get("/some-unknown-route")
         # Static dir is empty in tests — SPA mount skipped, so FastAPI returns 404
@@ -82,15 +82,14 @@ class TestViteConfig:
         vite_config = Path(__file__).parents[2] / "frontend" / "vite.config.ts"
         assert vite_config.exists(), "vite.config.ts must exist"
         content = vite_config.read_text()
-        assert "../src/lingo/static" in content, (
-            "Vite outDir must point to ../src/lingo/static"
-        )
+        assert "../src/lingo/static" in content, "Vite outDir must point to ../src/lingo/static"
 
     def test_frontend_package_has_build_script(self):
         """package.json must have a build script."""
         pkg = Path(__file__).parents[2] / "frontend" / "package.json"
         assert pkg.exists(), "frontend/package.json must exist"
         import json
+
         data = json.loads(pkg.read_text())
         assert "build" in data.get("scripts", {}), "package.json must have a build script"
 
@@ -98,5 +97,6 @@ class TestViteConfig:
         """package.json must have a test script."""
         pkg = Path(__file__).parents[2] / "frontend" / "package.json"
         import json
+
         data = json.loads(pkg.read_text())
         assert "test" in data.get("scripts", {}), "package.json must have a test script"

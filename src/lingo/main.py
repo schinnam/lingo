@@ -1,15 +1,15 @@
 """FastAPI application entry point."""
+
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
-from lingo.api.routes import terms
-from lingo.api.routes import auth, export, users, tokens, admin, features
+from lingo.api.routes import admin, auth, export, features, terms, tokens, users
 from lingo.config import settings
 from lingo.db.session import SessionFactory
 from lingo.mcp.app import mcp
@@ -27,6 +27,7 @@ async def lifespan(app: FastAPI):
     slack_client = None
     if settings.slack_bot_token:
         from slack_sdk.web.async_client import AsyncWebClient
+
         slack_client = AsyncWebClient(token=settings.slack_bot_token)
     app.state.slack_client = slack_client
 

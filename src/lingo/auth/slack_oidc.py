@@ -9,11 +9,11 @@ Slack OIDC flow:
 JWT helpers (moved from oidc.py) are also kept here for the existing
 Bearer-JWT auth path in deps.py and for test token creation.
 """
+
 import hashlib
 import hmac as _hmac
 import time
 import urllib.parse
-from typing import Optional
 
 import httpx
 import jwt as pyjwt
@@ -25,10 +25,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from lingo.config import settings
 from lingo.models import User
 
-
 # ---------------------------------------------------------------------------
 # AuthError
 # ---------------------------------------------------------------------------
+
 
 class AuthError(Exception):
     """Raised when a Slack auth step fails. Never include secrets in `code`."""
@@ -41,6 +41,7 @@ class AuthError(Exception):
 # ---------------------------------------------------------------------------
 # HMAC helpers
 # ---------------------------------------------------------------------------
+
 
 def hmac_sign(value: str, secret: str) -> str:
     """Return a hex HMAC-SHA256 signature of value using secret."""
@@ -135,9 +136,7 @@ async def upsert_user(
     4. IntegrityError on create (race) → re-query and return existing user
     """
     # 1. Lookup by slack_user_id
-    result = await session.execute(
-        select(User).where(User.slack_user_id == slack_user_id)
-    )
+    result = await session.execute(select(User).where(User.slack_user_id == slack_user_id))
     user = result.scalar_one_or_none()
     if user is not None:
         if user.email != email:
@@ -172,9 +171,7 @@ async def upsert_user(
     except IntegrityError:
         await session.rollback()
         # 4. Race on unique constraint — re-query and return existing row
-        result = await session.execute(
-            select(User).where(User.slack_user_id == slack_user_id)
-        )
+        result = await session.execute(select(User).where(User.slack_user_id == slack_user_id))
         user = result.scalar_one_or_none()
         if user is None:
             result = await session.execute(select(User).where(User.email == email))
@@ -186,12 +183,13 @@ async def upsert_user(
 # JWT helpers (moved from oidc.py — used by deps.py and tests)
 # ---------------------------------------------------------------------------
 
+
 def _derive_signing_key(secret: str) -> bytes:
-    """Derive a 32-byte key from the secret to satisfy HMAC-SHA256 minimum length (RFC 7518 §3.2)."""
+    """Derive a 32-byte signing key from secret (satisfies RFC 7518 §3.2 HMAC-SHA256 min length)."""
     return hashlib.sha256(secret.encode()).digest()
 
 
-def verify_jwt(token: str) -> Optional[dict]:
+def verify_jwt(token: str) -> dict | None:
     """Decode and validate a JWT signed with LINGO_SECRET_KEY (HS256).
 
     Returns the payload dict if valid, or None if invalid/expired.
@@ -212,8 +210,8 @@ def verify_jwt(token: str) -> Optional[dict]:
 def make_test_jwt(
     email: str,
     name: str = "Test User",
-    exp: Optional[int] = None,
-    sub: Optional[str] = None,
+    exp: int | None = None,
+    sub: str | None = None,
 ) -> str:
     """Create a HS256-signed JWT for testing. Uses `settings.secret_key`."""
     now = int(time.time())

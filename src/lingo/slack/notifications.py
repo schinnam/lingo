@@ -2,12 +2,10 @@
 
 Each function takes an explicit session_factory for testability.
 """
+
 from __future__ import annotations
 
 from uuid import UUID
-
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from lingo.models.term import Term
 from lingo.models.user import User
@@ -52,8 +50,7 @@ async def send_promotion_notification(
             return
 
     text = (
-        f":tada: *{term.name}* has been promoted to *{term.status}* status "
-        f"in the Lingo glossary!"
+        f":tada: *{term.name}* has been promoted to *{term.status}* status in the Lingo glossary!"
     )
     await client.chat_postMessage(channel=term.source_channel_id, text=text)
 

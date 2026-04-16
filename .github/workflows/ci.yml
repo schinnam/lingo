@@ -1,12 +1,9 @@
-# CI is intentionally disabled. To enable, uncomment the push/pull_request
-# triggers below and remove the workflow_dispatch-only block.
 name: CI
 
 on:
-  workflow_dispatch: # manual trigger only — remove to enable on push/PR
-  # push:
-  #   branches: [main]
-  # pull_request:
+  push:
+    branches: [main]
+  pull_request:
 
 jobs:
   test:

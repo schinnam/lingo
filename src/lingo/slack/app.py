@@ -15,24 +15,25 @@ Start with:
   LINGO_SLACK_BOT_TOKEN=... LINGO_SLACK_APP_TOKEN=... LINGO_SLACK_SIGNING_SECRET=... \\
   uv run python -m lingo.slack.app
 """
+
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
-from slack_bolt.async_app import AsyncApp
 from slack_bolt.adapter.socket_mode.async_handler import AsyncSocketModeHandler
+from slack_bolt.async_app import AsyncApp
 
 from lingo.config import settings
 from lingo.db.session import SessionFactory
 from lingo.models.term import Term
 from lingo.slack.handlers import (
-    handle_lingo_define,
     handle_lingo_add,
-    handle_lingo_vote,
+    handle_lingo_define,
     handle_lingo_export,
     handle_lingo_token,
+    handle_lingo_vote,
 )
 
 slack_app = AsyncApp(
@@ -49,7 +50,7 @@ async def lingo_command(ack, command, say, client):
     slack_user_id = command.get("user_id", "")
 
     if text.startswith("define "):
-        term_name = text[len("define "):].strip()
+        term_name = text[len("define ") :].strip()
         await handle_lingo_define(
             term_name=term_name,
             say=say,
@@ -58,7 +59,7 @@ async def lingo_command(ack, command, say, client):
 
     elif text.startswith("add "):
         # Format: add <term> -- <definition>
-        remainder = text[len("add "):].strip()
+        remainder = text[len("add ") :].strip()
         if " -- " in remainder:
             term_name, definition = remainder.split(" -- ", 1)
         else:
@@ -80,7 +81,7 @@ async def lingo_command(ack, command, say, client):
         )
 
     elif text.startswith("vote "):
-        term_name = text[len("vote "):].strip()
+        term_name = text[len("vote ") :].strip()
         await handle_lingo_vote(
             term_name=term_name,
             slack_user_id=slack_user_id,
@@ -96,7 +97,7 @@ async def lingo_command(ack, command, say, client):
         )
 
     elif text == "token" or text.startswith("token "):
-        remainder = text[len("token"):].strip()
+        remainder = text[len("token") :].strip()
         token_name = remainder if remainder else "Slack CLI token"
         raw, error = await handle_lingo_token(
             slack_user_id=slack_user_id,
@@ -149,7 +150,7 @@ async def staleness_confirm(ack, action, body, client):
         term = await session.get(Term, term_uuid)
         if term is None:
             return
-        term.last_confirmed_at = datetime.now(timezone.utc)
+        term.last_confirmed_at = datetime.now(UTC)
         term.is_stale = False
         await session.commit()
         term_name = term.name
@@ -180,10 +181,7 @@ async def staleness_update(ack, action, body, client):
 
     await client.chat_postMessage(
         channel=slack_user_id,
-        text=(
-            f"To update *{term_name}*, use:\n"
-            f"`/lingo add {term_name} -- <new definition>`"
-        ),
+        text=(f"To update *{term_name}*, use:\n`/lingo add {term_name} -- <new definition>`"),
     )
 
 
@@ -194,4 +192,5 @@ async def start():
 
 if __name__ == "__main__":
     import asyncio
+
     asyncio.run(start())

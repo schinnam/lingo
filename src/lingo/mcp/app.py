@@ -5,15 +5,12 @@ Tools exposed:
   search_terms(query, status?, limit?)               → matching terms
   list_terms(category?, status?, limit?, offset?)    → paginated term list
 """
-from typing import Optional
 
 import fastmcp
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from lingo.db.session import SessionFactory as async_session_factory
 from lingo.models.term import Term
-
 
 mcp = fastmcp.FastMCP(
     name="Lingo",
@@ -44,9 +41,7 @@ async def get_term(name: str) -> str:
         Term definition and metadata, or an error message if not found.
     """
     async with async_session_factory() as session:
-        result = await session.execute(
-            select(Term).where(Term.name.ilike(name))
-        )
+        result = await session.execute(select(Term).where(Term.name.ilike(name)))
         term = result.scalar_one_or_none()
 
     if term is None:
@@ -57,7 +52,7 @@ async def get_term(name: str) -> str:
 @mcp.tool()
 async def search_terms(
     query: str,
-    status: Optional[str] = None,
+    status: str | None = None,
     limit: int = 10,
 ) -> str:
     """Search for terms by keyword in name, definition, or full name.
@@ -94,8 +89,8 @@ async def search_terms(
 
 @mcp.tool()
 async def list_terms(
-    category: Optional[str] = None,
-    status: Optional[str] = None,
+    category: str | None = None,
+    status: str | None = None,
     limit: int = 20,
     offset: int = 0,
 ) -> str:

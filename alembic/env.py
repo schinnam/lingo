@@ -5,11 +5,10 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from alembic import context
-
-from lingo.models.base import Base
 # Import all models so they register with Base.metadata
 import lingo.models  # noqa: F401
+from alembic import context
+from lingo.models.base import Base
 
 config = context.config
 if config.config_file_name is not None:
@@ -18,6 +17,7 @@ if config.config_file_name is not None:
 # Override sqlalchemy.url from app settings so LINGO_DATABASE_URL is respected
 # (alembic.ini hardcodes localhost; in Docker the host is the service name)
 from lingo.config import settings  # noqa: E402
+
 config.set_main_option("sqlalchemy.url", settings.database_url)
 
 target_metadata = Base.metadata
