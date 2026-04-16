@@ -1,0 +1,94 @@
+name: "Bug Report: REST API"
+description: Report a regression or unexpected behaviour in the Lingo REST API
+title: "bug(api): "
+labels: ["bug", "api"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing an API bug. Providing the full request and response makes it much faster to reproduce.
+
+  - type: input
+    id: endpoint
+    attributes:
+      label: Endpoint & HTTP Method
+      description: e.g. `GET /api/v1/terms` or `POST /api/v1/terms`
+      placeholder: "POST /api/v1/terms"
+    validations:
+      required: true
+
+  - type: textarea
+    id: request_body
+    attributes:
+      label: Request Body / Headers
+      description: Paste the request payload (redact auth tokens) and any relevant headers
+      render: json
+    validations:
+      required: false
+
+  - type: textarea
+    id: response
+    attributes:
+      label: Response Body & Status Code
+      description: Paste the full response, including the HTTP status code
+      render: json
+    validations:
+      required: true
+
+  - type: input
+    id: postgres_version
+    attributes:
+      label: PostgreSQL Version
+      description: Output of `psql --version` or `SELECT version();`
+      placeholder: "PostgreSQL 16.2"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment Method
+      options:
+        - Docker (docker-compose)
+        - Bare metal / virtualenv
+        - Cloud (AWS / GCP / Azure / Railway / Fly.io / other)
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: migrations
+    attributes:
+      label: Alembic Migration State
+      description: Have all migrations been applied? (`uv run alembic current` / `uv run alembic upgrade head`)
+      options:
+        - "Yes — at head"
+        - "No — behind head"
+        - "Unknown"
+    validations:
+      required: true
+
+  - type: input
+    id: lingo_version
+    attributes:
+      label: Lingo Version
+      description: Output of `uv run lingo --version` or the Docker image tag
+      placeholder: "0.3.1"
+    validations:
+      required: false
+
+  - type: textarea
+    id: server_logs
+    attributes:
+      label: Server Logs
+      description: Relevant lines from the uvicorn / FastAPI logs around the time of the error
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional Context
+    validations:
+      required: false
