@@ -8,6 +8,7 @@ Configuration via environment variables:
 """
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 from typing import Optional
@@ -61,6 +62,7 @@ def _client() -> httpx.Client:
 @app.command()
 def define(
     term: str = typer.Argument(..., help="Term name to look up"),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
 ):
     """Look up a term by name and display its definition."""
     with _client() as client:
@@ -79,6 +81,10 @@ def define(
     if match is None:
         err_console.print(f'Error: no term found for "{term}"')
         raise typer.Exit(1)
+
+    if json_output:
+        typer.echo(json.dumps(match))
+        return
 
     if not exact and terms:
         console.print(f'[dim]No exact match for "{term}" — showing closest result.[/dim]')
@@ -148,6 +154,7 @@ def list_terms(
     status: Optional[str] = typer.Option(None, "--status", "-s", help="Filter by status"),
     category: Optional[str] = typer.Option(None, "--category", "-c", help="Filter by category"),
     limit: int = typer.Option(50, "--limit", "-n", help="Max results"),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
 ):
     """List glossary terms."""
     params: dict = {"limit": limit}
@@ -165,6 +172,10 @@ def list_terms(
             raise typer.Exit(1)
 
     terms = resp.json().get("items", [])
+
+    if json_output:
+        typer.echo(json.dumps(terms))
+        return
 
     if not terms:
         console.print("No terms found.")
