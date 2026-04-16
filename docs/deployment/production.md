@@ -134,6 +134,16 @@ APScheduler shares the FastAPI event loop. **You must run with `--workers 1`** t
 
 Always run migrations before restarting the server after an upgrade.
 
+### Slack Socket Mode — restart behavior
+
+When Lingo restarts, Slack queues incoming events for approximately **30 seconds** before discarding them. Any `/lingo` commands sent during that window (deploy, crash, OOM restart) are silently dropped — Slack does not retry them after the queue expires.
+
+**Operational guidance:**
+
+- Treat the 30-second window as an acceptable deployment trade-off for most teams.
+- Schedule deploys during low-traffic periods when possible.
+- If your team needs guaranteed command delivery, a future v2 enhancement can implement idempotent `event_id` deduplication at the handler layer — open [issue #26](https://github.com/schinnam/lingo/issues/26) for details.
+
 ---
 
 ## Monitoring

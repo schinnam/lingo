@@ -228,6 +228,12 @@ The bot sends direct messages automatically in two cases:
 
 ---
 
+## Known limitations
+
+**Commands during restarts:** When the Lingo server restarts (deploy, crash, OOM), Slack queues `/lingo` commands for ~30 seconds before dropping them. Commands sent in that window are silently lost. See the [production deployment guide](../deployment/production.md#slack-socket-mode--restart-behavior) for details and mitigation options.
+
+---
+
 ## Auto-discovery
 
 The daily discovery job (runs at 2 AM) scans public Slack channels over a 90-day window, extracts uppercase acronyms matching `[A-Z]{2,6}`, and creates `suggested` terms for any not already in the glossary. This surfaces jargon your team is already using without requiring anyone to add it manually.
