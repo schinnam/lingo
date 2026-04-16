@@ -1,0 +1,21 @@
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      fastapi-stack:
+        patterns: ["fastapi", "uvicorn", "pydantic", "pydantic-settings"]
+      database:
+        patterns: ["sqlalchemy", "asyncpg", "alembic"]
+      slack:
+        patterns: ["slack-bolt", "slack-sdk"]
+      auth:
+        patterns: ["authlib", "itsdangerous", "python-jose", "passlib"]
+      mcp:
+        patterns: ["fastmcp", "mcp"]
+    labels:
+      - "dependencies"
+    open-pull-requests-limit: 10
