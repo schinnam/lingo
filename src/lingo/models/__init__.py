@@ -6,6 +6,7 @@ from lingo.models.token import Token
 from lingo.models.term_history import TermHistory
 from lingo.models.term_relationship import TermRelationship, RelationshipType
 from lingo.models.job import Job, JobType, JobStatus
+from lingo.models.audit_event import AuditEvent
 
 __all__ = [
     "Base",
@@ -19,4 +20,5 @@ __all__ = [
     "Job",
     "JobType",
     "JobStatus",
+    "AuditEvent",
 ]

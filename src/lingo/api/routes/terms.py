@@ -29,6 +29,7 @@ from lingo.services.term_service import (
     VersionConflictError,
 )
 from lingo.services.vote_service import AlreadyVotedError, VoteService
+from lingo.services.audit_service import AuditService
 from lingo.config import settings
 
 router = APIRouter(prefix="/api/v1/terms", tags=["terms"])
@@ -71,6 +72,13 @@ async def create_term(
         full_name=body.full_name,
         category=body.category,
         created_by=current_user.id,
+    )
+    await AuditService(session).log(
+        "term.created",
+        actor_id=current_user.id,
+        target_type="term",
+        target_id=term.id,
+        payload={"name": term.name},
     )
     return _term_to_response(term)
 
@@ -156,6 +164,13 @@ async def update_term(
         raise HTTPException(status_code=404, detail="Term not found")
     except VersionConflictError:
         raise HTTPException(status_code=409, detail="Version conflict")
+    await AuditService(session).log(
+        "term.updated",
+        actor_id=current_user.id,
+        target_type="term",
+        target_id=term.id,
+        payload={"name": term.name, "change_note": body.change_note},
+    )
     vc = await _count_votes(session, term.id)
     return _term_to_response(term, vc)
 
@@ -168,9 +183,18 @@ async def delete_term(
 ):
     svc = TermService(session)
     try:
+        term = await svc.get(term_id)
+        term_name = term.name
         await svc.delete(term_id)
     except TermNotFoundError:
         raise HTTPException(status_code=404, detail="Term not found")
+    await AuditService(session).log(
+        "term.deleted",
+        actor_id=current_user.id,
+        target_type="term",
+        target_id=term_id,
+        payload={"name": term_name},
+    )
 
 
 @router.post("/{term_id}/vote", response_model=VoteResponse, dependencies=[require_feature("voting")])
@@ -190,6 +214,13 @@ async def vote_term(
         raise HTTPException(status_code=404, detail="Term not found")
     except AlreadyVotedError:
         raise HTTPException(status_code=409, detail="Already voted")
+    await AuditService(session).log(
+        "vote.cast",
+        actor_id=current_user.id,
+        target_type="term",
+        target_id=term_id,
+        payload={"transition": result.transition.value if result.transition else None},
+    )
     return VoteResponse(
         vote_count=result.vote_count,
         transition=result.transition.value if result.transition else None,
@@ -239,6 +270,13 @@ async def mark_official(
         term = await svc.mark_official(term_id=term_id, by_user=editor.id)
     except TermNotFoundError:
         raise HTTPException(status_code=404, detail="Term not found")
+    await AuditService(session).log(
+        "term.official",
+        actor_id=editor.id,
+        target_type="term",
+        target_id=term.id,
+        payload={"name": term.name},
+    )
     vc = await _count_votes(session, term.id)
     return _term_to_response(term, vc)
 
