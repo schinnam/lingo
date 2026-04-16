@@ -1,0 +1,45 @@
+# CI is intentionally disabled. To enable, uncomment the push/pull_request
+# triggers below and remove the workflow_dispatch-only block.
+name: CI
+
+on:
+  workflow_dispatch: # manual trigger only — remove to enable on push/PR
+  # push:
+  #   branches: [main]
+  # pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: lingo
+          POSTGRES_PASSWORD: lingo
+          POSTGRES_DB: lingo_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U lingo"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      LINGO_DATABASE_URL: postgresql+asyncpg://lingo:lingo@localhost:5432/lingo_test
+      LINGO_DEV_MODE: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --group dev
+      - run: uv run alembic upgrade head
+      - run: uv run pytest tests/ --cov=src/lingo
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --group dev
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
