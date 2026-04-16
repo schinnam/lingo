@@ -10,6 +10,7 @@ from sqlalchemy import select
 from lingo.api.deps import AdminUser, CurrentUser, SessionDep
 from lingo.api.schemas import TokenCreate, TokenCreateResponse, TokenResponse
 from lingo.models.token import Token
+from lingo.services.audit_service import AuditService
 
 router = APIRouter(prefix="/api/v1/tokens", tags=["tokens"])
 
@@ -41,6 +42,13 @@ async def create_token(body: TokenCreate, session: SessionDep, current_user: Cur
     session.add(token)
     await session.commit()
     await session.refresh(token)
+    await AuditService(session).log(
+        "token.created",
+        actor_id=current_user.id,
+        target_type="token",
+        target_id=token.id,
+        payload={"name": token.name, "scopes": token.scopes},
+    )
     return TokenCreateResponse(
         id=token.id,
         name=token.name,
@@ -57,5 +65,13 @@ async def delete_token(token_id: UUID, session: SessionDep, current_user: Curren
         raise HTTPException(status_code=404, detail="Token not found")
     if token.user_id != current_user.id and current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not your token")
+    token_name = token.name
     await session.delete(token)
     await session.commit()
+    await AuditService(session).log(
+        "token.revoked",
+        actor_id=current_user.id,
+        target_type="token",
+        target_id=token_id,
+        payload={"name": token_name},
+    )
