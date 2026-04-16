@@ -102,13 +102,17 @@ Seven tables. The core is `terms` — everything else supports it.
 
 ### Term status lifecycle
 
-```
-suggested → pending → community → official
-               ↑           ↑
-        (any user vote)  (vote count ≥ community_threshold)
-                                       ↓
-                              official (editor action,
-                              vote count ≥ official_threshold)
+```mermaid
+stateDiagram-v2
+    [*] --> suggested: User submits term
+    suggested --> pending: Maintainer approves
+    pending --> community: Reaches vote threshold
+    community --> official: Maintainer promotes
+    community --> disputed: Dispute flag raised
+    disputed --> community: Dispute resolved
+    official --> stale: Weekly staleness job (Mon 3am)
+    stale --> official: Re-confirmed by votes
+    stale --> [*]: Archived after no activity
 ```
 
 `VoteService` checks both thresholds on every vote and triggers the transition automatically. Editors can also manually `promote` or `mark_official` via the API.
