@@ -93,6 +93,31 @@ Follow red/green TDD: write a failing test first, then implement. PRs without te
 
 Always write both `upgrade()` and `downgrade()` in migrations. Missing `downgrade()` that drops enum types causes "type already exists" errors on re-upgrade — see CHANGELOG for prior incident.
 
+## Releasing a New Version
+
+Lingo exposes multiple versioned surfaces — the REST API (`/api/v1/`), Slack command syntax, and MCP tool definitions. A breaking change to any of them warrants a major version bump.
+
+### Semantic Versioning policy
+
+| Change | Version Bump |
+|--------|-------------|
+| Breaking change to `/api/v1/` response schema | MAJOR |
+| Breaking change to Slack command syntax | MAJOR |
+| Breaking change to MCP tool definitions | MAJOR |
+| New API endpoint, Slack command, or MCP tool | MINOR |
+| New config option (backwards-compatible) | MINOR |
+| Bug fix, dependency update, docs | PATCH |
+
+### Release steps
+
+1. Update `version` in `pyproject.toml`
+2. Update `CHANGELOG.md` — move Unreleased items under the new version heading with today's date
+3. Commit: `git commit -m "chore: release vX.Y.Z"`
+4. Tag: `git tag vX.Y.Z`
+5. Push tag: `git push origin vX.Y.Z`
+6. Create a GitHub Release from the tag — paste the CHANGELOG section as release notes
+   The Docker image will be published automatically (see workflow #73)
+
 ## Submitting a PR
 
 1. Branch off `main`.
