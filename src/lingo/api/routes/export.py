@@ -8,6 +8,8 @@ from lingo.models.term import Term
 
 router = APIRouter(prefix="/api/v1", tags=["export"])
 
+_PAGE_CAP = 500
+
 
 @router.get("/export")
 async def export_terms(
@@ -15,20 +17,24 @@ async def export_terms(
     current_user: CurrentUser,
     status: str = Query("official"),
     format: str = Query("markdown"),
-    limit: int = Query(100, le=500),
+    limit: int = Query(_PAGE_CAP, le=_PAGE_CAP),
     offset: int = Query(0),
 ):
+    # Fetch one extra to detect truncation without a separate COUNT query
     stmt = (
         select(Term)
         .where(Term.status == status)
         .order_by(Term.name)
         .offset(offset)
-        .limit(limit)
+        .limit(limit + 1)
     )
     result = await session.execute(stmt)
-    terms = list(result.scalars().all())
+    rows = list(result.scalars().all())
 
-    lines = [f"# Lingo Glossary\n"]
+    truncated = len(rows) > limit
+    terms = rows[:limit]
+
+    lines = ["# Lingo Glossary\n"]
     for term in terms:
         lines.append(f"## {term.name}")
         if term.full_name:
@@ -39,4 +45,5 @@ async def export_terms(
         lines.append("")
 
     content = "\n".join(lines)
-    return Response(content=content, media_type="text/markdown")
+    headers = {"Lingo-Truncated": "true"} if truncated else {}
+    return Response(content=content, media_type="text/markdown", headers=headers)
