@@ -1,5 +1,4 @@
 """Tests for AuditService."""
-import pytest
 
 from lingo.models import AuditEvent
 from lingo.services.audit_service import AuditService

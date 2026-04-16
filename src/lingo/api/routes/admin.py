@@ -1,4 +1,5 @@
 """REST routes for /api/v1/admin."""
+
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import func, select
 

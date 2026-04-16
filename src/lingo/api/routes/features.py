@@ -1,4 +1,5 @@
 """GET /api/v1/features — exposes feature flags to the frontend."""
+
 from fastapi import APIRouter
 
 from lingo.config import settings

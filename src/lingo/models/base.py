@@ -1,9 +1,8 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, func
-from sqlalchemy.orm import DeclarativeBase, mapped_column, MappedColumn
 from sqlalchemy import Uuid
+from sqlalchemy.orm import DeclarativeBase, MappedColumn, mapped_column
 
 
 class Base(DeclarativeBase):
@@ -15,4 +14,4 @@ def uuid_pk() -> MappedColumn:
 
 
 def now_utc() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)

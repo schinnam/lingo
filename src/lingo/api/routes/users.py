@@ -1,4 +1,5 @@
 """REST routes for /api/v1/users."""
+
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException

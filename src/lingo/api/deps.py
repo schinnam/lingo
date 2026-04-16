@@ -1,7 +1,8 @@
 """FastAPI dependencies: auth, session injection."""
+
 import hashlib
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import Depends, Header, HTTPException, Request
@@ -42,7 +43,7 @@ async def _resolve_api_token(raw_token: str, session: AsyncSession) -> User | No
         return None
 
     # Update last_used_at
-    token.last_used_at = datetime.now(timezone.utc)
+    token.last_used_at = datetime.now(UTC)
     await session.commit()
 
     return user
@@ -133,10 +134,12 @@ async def get_current_user(
 
 def require_role(*roles: str):
     """Return a dependency that enforces the user has one of the given roles."""
+
     async def _check(user: User = Depends(get_current_user)) -> User:
         if user.role not in roles:
             raise HTTPException(status_code=403, detail="Insufficient permissions")
         return user
+
     return _check
 
 
@@ -147,12 +150,14 @@ def require_feature(flag: str):
 
         @router.post("/vote", dependencies=[require_feature("voting")])
     """
+
     def _check() -> None:
         if not getattr(settings, f"feature_{flag}", False):
             raise HTTPException(
                 status_code=501,
                 detail=f"Feature '{flag}' is disabled on this instance.",
             )
+
     return Depends(_check)
 
 

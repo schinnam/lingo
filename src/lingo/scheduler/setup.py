@@ -3,6 +3,7 @@
 NOTE: Run the server with --workers 1 (single process) so the scheduler
 fires exactly once per trigger.
 """
+
 from __future__ import annotations
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler

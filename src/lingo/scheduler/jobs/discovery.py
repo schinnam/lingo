@@ -8,11 +8,12 @@ Algorithm:
    with status="suggested" and source="slack_discovery".
 5. Persist a Job row with progress_json (channels_scanned, terms_found).
 """
+
 from __future__ import annotations
 
 import re
 from collections import Counter
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 
@@ -45,7 +46,7 @@ async def run_discovery_job(
         async with session_factory() as sess:
             j = await sess.get(Job, job_id)
             j.status = JobStatus.completed
-            j.completed_at = datetime.now(timezone.utc)
+            j.completed_at = datetime.now(UTC)
             j.progress_json = {
                 "channels_scanned": channels_scanned,
                 "terms_found": terms_found,
@@ -55,15 +56,13 @@ async def run_discovery_job(
         async with session_factory() as sess:
             j = await sess.get(Job, job_id)
             j.status = JobStatus.failed
-            j.completed_at = datetime.now(timezone.utc)
+            j.completed_at = datetime.now(UTC)
             j.error = str(exc)
             await sess.commit()
 
 
 async def _scan_slack(*, session_factory, slack_client, lookback_days: int):
-    oldest_ts = (
-        datetime.now(timezone.utc) - timedelta(days=lookback_days)
-    ).timestamp()
+    oldest_ts = (datetime.now(UTC) - timedelta(days=lookback_days)).timestamp()
 
     # Fetch all channels
     channels_resp = await slack_client.conversations_list()

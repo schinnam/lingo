@@ -5,15 +5,14 @@ Strategy:
   - Tests mock httpx.Client to avoid needing a running server.
   - Each command is tested for: happy path, not-found, and error.
 """
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-import pytest
 from typer.testing import CliRunner
 
 from lingo.cli.main import app
-
 
 runner = CliRunner()
 
@@ -21,6 +20,7 @@ runner = CliRunner()
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _terms_envelope(items: list) -> dict:
     """Wrap a list of term dicts in the TermsListResponse envelope."""
@@ -34,7 +34,8 @@ def _mock_response(json_data=None, status_code=200, text=""):
     resp.text = text
     resp.raise_for_status = MagicMock()
     if status_code >= 400:
-        from httpx import HTTPStatusError, Request, Response
+        from httpx import HTTPStatusError
+
         resp.raise_for_status.side_effect = HTTPStatusError(
             "error", request=MagicMock(), response=MagicMock()
         )
@@ -156,8 +157,15 @@ class TestAdd:
             mock_client.post.return_value = _mock_response(created, status_code=201)
             result = runner.invoke(
                 app,
-                ["add", "RESQ", "Manages the resource queue.",
-                 "--full-name", "Resource Queue", "--category", "Engineering"],
+                [
+                    "add",
+                    "RESQ",
+                    "Manages the resource queue.",
+                    "--full-name",
+                    "Resource Queue",
+                    "--category",
+                    "Engineering",
+                ],
             )
 
         assert result.exit_code == 0
@@ -335,6 +343,7 @@ class TestJsonFlag:
 
     def test_define_json_output(self):
         import json
+
         with patch("lingo.cli.main.httpx.Client") as mock_client_cls:
             mock_client = mock_client_cls.return_value.__enter__.return_value
             mock_client.get.return_value = _mock_response(_terms_envelope([self._term]))
@@ -358,7 +367,11 @@ class TestJsonFlag:
 
     def test_list_json_output(self):
         import json
-        terms = [self._term, {**self._term, "name": "BETA", "id": "00000000-0000-0000-0000-000000000002"}]
+
+        terms = [
+            self._term,
+            {**self._term, "name": "BETA", "id": "00000000-0000-0000-0000-000000000002"},
+        ]
         with patch("lingo.cli.main.httpx.Client") as mock_client_cls:
             mock_client = mock_client_cls.return_value.__enter__.return_value
             mock_client.get.return_value = _mock_response(_terms_envelope(terms))
@@ -373,6 +386,7 @@ class TestJsonFlag:
 
     def test_list_json_empty(self):
         import json
+
         with patch("lingo.cli.main.httpx.Client") as mock_client_cls:
             mock_client = mock_client_cls.return_value.__enter__.return_value
             mock_client.get.return_value = _mock_response(_terms_envelope([]))

@@ -1,9 +1,10 @@
 """Tests for the TermService CRUD layer."""
+
 import pytest
 from sqlalchemy import select
 
 from lingo.models import Term, TermHistory
-from lingo.services.term_service import TermService, TermNotFoundError, VersionConflictError
+from lingo.services.term_service import TermNotFoundError, TermService, VersionConflictError
 
 
 class TestCreateTerm:
@@ -54,6 +55,7 @@ class TestGetTerm:
 
     async def test_get_missing_raises(self, session):
         import uuid
+
         svc = TermService(session)
         with pytest.raises(TermNotFoundError):
             await svc.get(uuid.uuid4())
@@ -81,15 +83,24 @@ class TestListTerms:
 
     async def test_list_filter_by_category(self, session, member_user):
         svc = TermService(session)
-        await svc.create(name="DNS", definition="Domain Name System", category="Eng", created_by=member_user.id)
-        await svc.create(name="OKR", definition="Objectives and Key Results", category="Ops", created_by=member_user.id)
+        await svc.create(
+            name="DNS", definition="Domain Name System", category="Eng", created_by=member_user.id
+        )
+        await svc.create(
+            name="OKR",
+            definition="Objectives and Key Results",
+            category="Ops",
+            created_by=member_user.id,
+        )
 
         eng = await svc.list(category="Eng")
         assert all(r.category == "Eng" for r in eng)
 
     async def test_list_search(self, session, member_user):
         svc = TermService(session)
-        await svc.create(name="API", definition="Application Programming Interface", created_by=member_user.id)
+        await svc.create(
+            name="API", definition="Application Programming Interface", created_by=member_user.id
+        )
         await svc.create(name="PR", definition="Pull Request", created_by=member_user.id)
 
         results = await svc.list(q="Pull")
@@ -123,9 +134,11 @@ class TestUpdateTerm:
             definition="Return on Insight",
             change_note="Updated for new usage",
         )
-        history = (await session.execute(
-            select(TermHistory).where(TermHistory.term_id == term.id)
-        )).scalars().all()
+        history = (
+            (await session.execute(select(TermHistory).where(TermHistory.term_id == term.id)))
+            .scalars()
+            .all()
+        )
         assert len(history) == 1
         assert history[0].change_note == "Updated for new usage"
 
@@ -144,6 +157,7 @@ class TestUpdateTerm:
 
     async def test_update_missing_term_raises(self, session, member_user):
         import uuid
+
         svc = TermService(session)
         with pytest.raises(TermNotFoundError):
             await svc.update(
@@ -166,6 +180,7 @@ class TestDeleteTerm:
 
     async def test_delete_missing_raises(self, session):
         import uuid
+
         svc = TermService(session)
         with pytest.raises(TermNotFoundError):
             await svc.delete(uuid.uuid4())

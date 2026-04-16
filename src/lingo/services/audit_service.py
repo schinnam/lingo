@@ -1,4 +1,3 @@
-from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import select
@@ -15,10 +14,10 @@ class AuditService:
         self,
         action: str,
         *,
-        actor_id: Optional[UUID] = None,
-        target_type: Optional[str] = None,
-        target_id: Optional[UUID] = None,
-        payload: Optional[dict] = None,
+        actor_id: UUID | None = None,
+        target_type: str | None = None,
+        target_id: UUID | None = None,
+        payload: dict | None = None,
     ) -> AuditEvent:
         event = AuditEvent(
             actor_id=actor_id,
@@ -37,11 +36,6 @@ class AuditService:
         limit: int = 100,
         offset: int = 0,
     ) -> list[AuditEvent]:
-        stmt = (
-            select(AuditEvent)
-            .order_by(AuditEvent.created_at.desc())
-            .offset(offset)
-            .limit(limit)
-        )
+        stmt = select(AuditEvent).order_by(AuditEvent.created_at.desc()).offset(offset).limit(limit)
         result = await self._session.execute(stmt)
         return list(result.scalars().all())

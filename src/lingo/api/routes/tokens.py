@@ -1,13 +1,14 @@
 """REST routes for /api/v1/tokens."""
+
+import base64
 import hashlib
 import os
-import base64
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
 
-from lingo.api.deps import AdminUser, CurrentUser, SessionDep
+from lingo.api.deps import CurrentUser, SessionDep
 from lingo.api.schemas import TokenCreate, TokenCreateResponse, TokenResponse
 from lingo.models.token import Token
 from lingo.services.audit_service import AuditService

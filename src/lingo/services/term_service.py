@@ -1,8 +1,8 @@
 """Term CRUD service layer."""
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import select
@@ -43,8 +43,8 @@ class TermService:
         name: str,
         definition: str,
         created_by: UUID,
-        full_name: Optional[str] = None,
-        category: Optional[str] = None,
+        full_name: str | None = None,
+        category: str | None = None,
         source: str = "user",
     ) -> Term:
         term = Term(
@@ -70,9 +70,9 @@ class TermService:
     async def list(
         self,
         *,
-        q: Optional[str] = None,
-        status: Optional[str] = None,
-        category: Optional[str] = None,
+        q: str | None = None,
+        status: str | None = None,
+        category: str | None = None,
         limit: int = 100,
         offset: int = 0,
     ) -> list[Term]:
@@ -98,18 +98,16 @@ class TermService:
         term_id: UUID,
         version: int,
         updated_by: UUID,
-        definition: Optional[str] = None,
-        full_name: Optional[str] = None,
-        category: Optional[str] = None,
-        change_note: Optional[str] = None,
+        definition: str | None = None,
+        full_name: str | None = None,
+        category: str | None = None,
+        change_note: str | None = None,
     ) -> Term:
         term = await self._session.get(Term, term_id)
         if term is None:
             raise TermNotFoundError(f"Term {term_id} not found")
         if term.version != version:
-            raise VersionConflictError(
-                f"Version conflict: expected {term.version}, got {version}"
-            )
+            raise VersionConflictError(f"Version conflict: expected {term.version}, got {version}")
 
         # Snapshot history before mutation
         snapshot = TermHistory(
@@ -173,7 +171,7 @@ class TermService:
         if term is None:
             raise TermNotFoundError(f"Term {term_id} not found")
         term.is_stale = False
-        term.last_confirmed_at = datetime.now(timezone.utc)
+        term.last_confirmed_at = datetime.now(UTC)
         await self._session.commit()
         await self._session.refresh(term)
         return term
@@ -206,7 +204,7 @@ class TermService:
         if term.owner_id is not None and not force:
             raise AlreadyOwnedError(f"Term {term_id} already has an owner")
         term.owner_id = user_id
-        term.owned_at = datetime.now(timezone.utc)
+        term.owned_at = datetime.now(UTC)
         await self._session.commit()
         await self._session.refresh(term)
         return term

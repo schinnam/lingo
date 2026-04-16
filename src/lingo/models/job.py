@@ -1,19 +1,18 @@
 import enum
 from datetime import datetime
-from typing import Optional
 
-from sqlalchemy import DateTime, Enum, JSON, String, func
+from sqlalchemy import JSON, DateTime, Enum, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from lingo.models.base import Base, uuid_pk
 
 
-class JobType(str, enum.Enum):
+class JobType(enum.StrEnum):
     discovery = "discovery"
     staleness = "staleness"
 
 
-class JobStatus(str, enum.Enum):
+class JobStatus(enum.StrEnum):
     pending = "pending"
     running = "running"
     completed = "completed"
@@ -28,14 +27,10 @@ class Job(Base):
     status: Mapped[JobStatus] = mapped_column(
         Enum(JobStatus), nullable=False, default=JobStatus.pending
     )
-    progress_json: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
-    started_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    completed_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    error: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    progress_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    error: Mapped[str | None] = mapped_column(String, nullable=True)
 
     def __init__(self, **kwargs):
         if "status" not in kwargs:

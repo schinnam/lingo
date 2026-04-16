@@ -1,7 +1,7 @@
 """Voting mechanics and status auto-transition service."""
+
 import enum
 from dataclasses import dataclass
-from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import func, select, update
@@ -17,7 +17,7 @@ class AlreadyVotedError(Exception):
     pass
 
 
-class StatusTransition(str, enum.Enum):
+class StatusTransition(enum.StrEnum):
     to_community = "to_community"
     to_official = "to_official"
 
@@ -25,7 +25,7 @@ class StatusTransition(str, enum.Enum):
 @dataclass
 class VoteResult:
     vote_count: int
-    transition: Optional[StatusTransition]
+    transition: StatusTransition | None
 
 
 class VoteService:
@@ -45,9 +45,11 @@ class VoteService:
             raise TermNotFoundError(f"Term {term_id} not found")
 
         # Check duplicate
-        existing = (await self._session.execute(
-            select(Vote).where(Vote.term_id == term_id, Vote.user_id == user_id)
-        )).scalar_one_or_none()
+        existing = (
+            await self._session.execute(
+                select(Vote).where(Vote.term_id == term_id, Vote.user_id == user_id)
+            )
+        ).scalar_one_or_none()
         if existing is not None:
             raise AlreadyVotedError(f"User {user_id} already voted on term {term_id}")
 
@@ -61,9 +63,11 @@ class VoteService:
             raise AlreadyVotedError(f"User {user_id} already voted on term {term_id}")
 
         # Count votes inside the same transaction — flush ensures our vote is visible
-        vote_count = (await self._session.execute(
-            select(func.count()).select_from(Vote).where(Vote.term_id == term_id)
-        )).scalar()
+        vote_count = (
+            await self._session.execute(
+                select(func.count()).select_from(Vote).where(Vote.term_id == term_id)
+            )
+        ).scalar()
 
         # CAS status transition: atomic UPDATE ... WHERE status=<expected> AND version=<seen>
         # If another concurrent session already transitioned, rowcount == 0 and we skip.

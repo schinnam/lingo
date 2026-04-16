@@ -1,25 +1,26 @@
 """Tests for Phase 2 auth: OIDC JWT bearer + MCP API token bearer."""
-import hashlib
+
 import base64
+import hashlib
 import os
-import uuid
-from unittest.mock import patch, AsyncMock
+from datetime import UTC
+from unittest.mock import AsyncMock, patch
 
 import pytest
-from httpx import AsyncClient, ASGITransport
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from lingo.models.base import Base
-from lingo.models import User
-from lingo.models.token import Token
-from lingo.main import app
-from lingo.db.session import get_session
 from lingo.config import settings
-
+from lingo.db.session import get_session
+from lingo.main import app
+from lingo.models import User
+from lingo.models.base import Base
+from lingo.models.token import Token
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 async def test_engine():
@@ -57,9 +58,7 @@ async def client(test_session_factory, db_users):
     app.dependency_overrides[get_session] = _override_get_session
     settings.dev_mode = True
 
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as ac:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         ac._admin = db_users["admin"]
         ac._member = db_users["member"]
         ac._admin_id = str(db_users["admin"].id)
@@ -111,7 +110,8 @@ class TestMCPBearerTokenAuth:
 
     async def test_revoked_token_returns_401(self, client, test_session_factory):
         """A revoked token (revoked_at set) must not authenticate."""
-        from datetime import datetime, timezone
+        from datetime import datetime
+
         raw, token_hash = _make_api_token()
         async with test_session_factory() as sess:
             token = Token(
@@ -119,7 +119,7 @@ class TestMCPBearerTokenAuth:
                 name="revoked-token",
                 token_hash=token_hash,
                 scopes=["read"],
-                revoked_at=datetime.now(timezone.utc),
+                revoked_at=datetime.now(UTC),
             )
             sess.add(token)
             await sess.commit()
@@ -215,6 +215,7 @@ class TestMCPBearerTokenAuth:
 # Auth method priority: X-User-Id vs Bearer token
 # ---------------------------------------------------------------------------
 
+
 class TestAuthMethodPriority:
     """Both auth methods should work; Bearer token takes priority over X-User-Id."""
 
@@ -271,22 +272,28 @@ class TestAuthMethodPriority:
 # Slack OIDC Auth (replaces JWT-based TestOIDCJWTAuth)
 # ---------------------------------------------------------------------------
 
+
 class TestSlackOIDCAuth:
     """Slack OIDC callback creates/links users and establishes a session."""
 
     async def test_new_user_created_on_first_slack_signin(self, client, test_session_factory):
         """GET /auth/slack/callback creates a new User row on first Sign in with Slack."""
         from sqlalchemy import select
+
         from lingo.auth.slack_oidc import hmac_sign
 
         nonce = "test-nonce-newuser"
         state = hmac_sign(nonce, settings.secret_key)
 
-        with patch("lingo.api.routes.auth.exchange_code", new_callable=AsyncMock) as mock_exc, \
-             patch("lingo.api.routes.auth.get_user_info", new_callable=AsyncMock) as mock_info:
+        with (
+            patch("lingo.api.routes.auth.exchange_code", new_callable=AsyncMock) as mock_exc,
+            patch("lingo.api.routes.auth.get_user_info", new_callable=AsyncMock) as mock_info,
+        ):
             mock_exc.return_value = {"access_token": "slack-token"}
             mock_info.return_value = {
-                "sub": "U123", "email": "new@corp.com", "name": "New User",
+                "sub": "U123",
+                "email": "new@corp.com",
+                "name": "New User",
             }
 
             resp = await client.get(
@@ -298,9 +305,7 @@ class TestSlackOIDCAuth:
         assert "session" in resp.cookies
 
         async with test_session_factory() as sess:
-            result = await sess.execute(
-                select(User).where(User.email == "new@corp.com")
-            )
+            result = await sess.execute(select(User).where(User.email == "new@corp.com"))
             user = result.scalar_one_or_none()
         assert user is not None
         assert user.slack_user_id == "U123"
@@ -309,6 +314,7 @@ class TestSlackOIDCAuth:
     async def test_existing_user_gets_slack_user_id_linked(self, client, test_session_factory):
         """Existing user matched by email gets slack_user_id set; no duplicate row created."""
         from sqlalchemy import select
+
         from lingo.auth.slack_oidc import hmac_sign
 
         async with test_session_factory() as sess:
@@ -319,11 +325,15 @@ class TestSlackOIDCAuth:
         nonce = "test-nonce-existing"
         state = hmac_sign(nonce, settings.secret_key)
 
-        with patch("lingo.api.routes.auth.exchange_code", new_callable=AsyncMock) as mock_exc, \
-             patch("lingo.api.routes.auth.get_user_info", new_callable=AsyncMock) as mock_info:
+        with (
+            patch("lingo.api.routes.auth.exchange_code", new_callable=AsyncMock) as mock_exc,
+            patch("lingo.api.routes.auth.get_user_info", new_callable=AsyncMock) as mock_info,
+        ):
             mock_exc.return_value = {"access_token": "slack-token"}
             mock_info.return_value = {
-                "sub": "U456", "email": "existing@corp.com", "name": "Existing",
+                "sub": "U456",
+                "email": "existing@corp.com",
+                "name": "Existing",
             }
 
             resp = await client.get(
@@ -334,9 +344,7 @@ class TestSlackOIDCAuth:
         assert resp.status_code in (302, 307)
 
         async with test_session_factory() as sess:
-            result = await sess.execute(
-                select(User).where(User.email == "existing@corp.com")
-            )
+            result = await sess.execute(select(User).where(User.email == "existing@corp.com"))
             users = result.scalars().all()
         assert len(users) == 1  # no duplicate row
         assert users[0].slack_user_id == "U456"
@@ -357,9 +365,7 @@ class TestSlackOIDCAuth:
         assert resp.status_code == 401
 
         # Establish session via dev login (dev_mode=True in client fixture)
-        login_resp = await client.get(
-            f"/auth/dev/login?email={client._member.email}"
-        )
+        login_resp = await client.get(f"/auth/dev/login?email={client._member.email}")
         assert login_resp.status_code in (302, 307)
 
         # Explicitly pass session cookie → 200
@@ -373,15 +379,14 @@ class TestSlackOIDCAuth:
 # API Token Ownership
 # ---------------------------------------------------------------------------
 
+
 class TestAPITokenOwnership:
     """Non-admin users can create/delete their own tokens; cannot delete others'."""
 
     async def test_member_token_crud_and_cross_user_forbidden(self, client, test_session_factory):
         """Member: POST /tokens → 201; DELETE own → 204; DELETE admin's token → 403."""
         # Establish member session via dev login
-        login_resp = await client.get(
-            f"/auth/dev/login?email={client._member.email}"
-        )
+        login_resp = await client.get(f"/auth/dev/login?email={client._member.email}")
         assert login_resp.status_code in (302, 307)
         member_cookies = dict(login_resp.cookies)
 

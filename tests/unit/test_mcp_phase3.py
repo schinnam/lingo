@@ -7,6 +7,7 @@ Strategy:
     MCPBearerAuthMiddleware we wire onto the real MCP endpoint.
   - Integration smoke test confirms /mcp is mounted and returns 401 without a token.
 """
+
 import hashlib
 
 import pytest
@@ -17,14 +18,12 @@ from starlette.requests import Request
 from starlette.responses import PlainTextResponse
 from starlette.routing import Route
 
-from lingo.db.session import get_session
 from lingo.main import app
+from lingo.mcp.auth import MCPBearerAuthMiddleware
 from lingo.models import User
 from lingo.models.base import Base
 from lingo.models.term import Term
 from lingo.models.token import Token
-from lingo.mcp.auth import MCPBearerAuthMiddleware
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -342,8 +341,8 @@ def _make_auth_app(session_factory):
 
 class TestMCPBearerAuthMiddleware:
     async def test_no_token_returns_401(self, seeded_db):
-        from lingo import mcp as mcp_mod
         from lingo.mcp import auth as auth_mod
+
         factory = seeded_db["factory"]
 
         # Patch SessionFactory inside auth module to use test DB
@@ -352,7 +351,9 @@ class TestMCPBearerAuthMiddleware:
         try:
             inner = Starlette(routes=[Route("/", _echo_handler, methods=["POST", "GET"])])
             auth_app = MCPBearerAuthMiddleware(inner)
-            async with AsyncClient(transport=ASGITransport(app=auth_app), base_url="http://test") as client:
+            async with AsyncClient(
+                transport=ASGITransport(app=auth_app), base_url="http://test"
+            ) as client:
                 resp = await client.post("/")
             assert resp.status_code == 401
         finally:
@@ -360,6 +361,7 @@ class TestMCPBearerAuthMiddleware:
 
     async def test_bad_token_returns_401(self, seeded_db):
         from lingo.mcp import auth as auth_mod
+
         factory = seeded_db["factory"]
 
         original = auth_mod.SessionFactory
@@ -367,7 +369,9 @@ class TestMCPBearerAuthMiddleware:
         try:
             inner = Starlette(routes=[Route("/", _echo_handler, methods=["POST", "GET"])])
             auth_app = MCPBearerAuthMiddleware(inner)
-            async with AsyncClient(transport=ASGITransport(app=auth_app), base_url="http://test") as client:
+            async with AsyncClient(
+                transport=ASGITransport(app=auth_app), base_url="http://test"
+            ) as client:
                 resp = await client.post("/", headers={"Authorization": "Bearer bad-token"})
             assert resp.status_code == 401
         finally:
@@ -375,6 +379,7 @@ class TestMCPBearerAuthMiddleware:
 
     async def test_valid_token_passes_through(self, seeded_db):
         from lingo.mcp import auth as auth_mod
+
         factory = seeded_db["factory"]
         raw_token = seeded_db["raw_token"]
 
@@ -383,7 +388,9 @@ class TestMCPBearerAuthMiddleware:
         try:
             inner = Starlette(routes=[Route("/", _echo_handler, methods=["POST", "GET"])])
             auth_app = MCPBearerAuthMiddleware(inner)
-            async with AsyncClient(transport=ASGITransport(app=auth_app), base_url="http://test") as client:
+            async with AsyncClient(
+                transport=ASGITransport(app=auth_app), base_url="http://test"
+            ) as client:
                 resp = await client.post("/", headers={"Authorization": f"Bearer {raw_token}"})
             assert resp.status_code == 200
             assert resp.text == "ok"
@@ -392,6 +399,7 @@ class TestMCPBearerAuthMiddleware:
 
     async def test_malformed_auth_header_returns_401(self, seeded_db):
         from lingo.mcp import auth as auth_mod
+
         factory = seeded_db["factory"]
 
         original = auth_mod.SessionFactory
@@ -399,7 +407,9 @@ class TestMCPBearerAuthMiddleware:
         try:
             inner = Starlette(routes=[Route("/", _echo_handler, methods=["POST", "GET"])])
             auth_app = MCPBearerAuthMiddleware(inner)
-            async with AsyncClient(transport=ASGITransport(app=auth_app), base_url="http://test") as client:
+            async with AsyncClient(
+                transport=ASGITransport(app=auth_app), base_url="http://test"
+            ) as client:
                 resp = await client.post("/", headers={"Authorization": "Token abc123"})
             assert resp.status_code == 401
         finally:
@@ -414,9 +424,7 @@ class TestMCPBearerAuthMiddleware:
 class TestMCPMounted:
     async def test_mcp_endpoint_exists_and_rejects_unauthenticated(self):
         """Smoke test: /mcp is reachable and returns 401 without a token."""
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             resp = await client.post(
                 "/mcp/",
                 content=b"{}",

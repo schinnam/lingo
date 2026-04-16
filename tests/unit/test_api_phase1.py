@@ -1,19 +1,21 @@
 """Tests for remaining Phase 1 REST endpoints."""
+
 import uuid
+
 import pytest
-from httpx import AsyncClient, ASGITransport
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from lingo.models.base import Base
-from lingo.models import User, Term
-from lingo.main import app
-from lingo.db.session import get_session
 from lingo.config import settings
-
+from lingo.db.session import get_session
+from lingo.main import app
+from lingo.models import User
+from lingo.models.base import Base
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 async def test_engine():
@@ -50,9 +52,7 @@ async def client(test_session_factory):
         editor_id = str(editor.id)
         member_id = str(member.id)
 
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as ac:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         ac._admin_id = admin_id
         ac._editor_id = editor_id
         ac._member_id = member_id
@@ -83,6 +83,7 @@ async def _create_suggested_term(client, name="SUGG"):
 # ---------------------------------------------------------------------------
 # Term actions: dispute
 # ---------------------------------------------------------------------------
+
 
 class TestDisputeAPI:
     async def test_dispute_term_returns_200_and_sets_flag(self, client):
@@ -122,6 +123,7 @@ class TestDisputeAPI:
 # Term actions: mark official (editor+)
 # ---------------------------------------------------------------------------
 
+
 class TestMarkOfficialAPI:
     async def test_editor_can_mark_official(self, client):
         term = await _create_term(client, "OFF", "Mark official")
@@ -152,6 +154,7 @@ class TestMarkOfficialAPI:
 # Term actions: confirm (reset staleness)
 # ---------------------------------------------------------------------------
 
+
 class TestConfirmAPI:
     async def test_owner_can_confirm(self, client):
         term = await _create_term(client, "CONF", "Confirm me")
@@ -178,6 +181,7 @@ class TestConfirmAPI:
 # ---------------------------------------------------------------------------
 # Term actions: claim ownership
 # ---------------------------------------------------------------------------
+
 
 class TestClaimAPI:
     async def test_member_can_claim_unowned_term(self, client):
@@ -214,6 +218,7 @@ class TestClaimAPI:
 # ---------------------------------------------------------------------------
 # History
 # ---------------------------------------------------------------------------
+
 
 class TestHistoryAPI:
     async def test_get_history_empty_initially(self, client):
@@ -296,6 +301,7 @@ class TestRevertAPI:
 # Relationships
 # ---------------------------------------------------------------------------
 
+
 class TestRelationshipsAPI:
     async def test_editor_can_add_relationship(self, client):
         term_a = await _create_term(client, "RELA", "Term A")
@@ -350,6 +356,7 @@ class TestRelationshipsAPI:
 # Suggest workflow: promote / dismiss
 # ---------------------------------------------------------------------------
 
+
 class TestPromoteDismissAPI:
     async def _make_suggested_term(self, client):
         """Create a term then manually set its status to suggested."""
@@ -403,6 +410,7 @@ class TestPromoteDismissAPI:
 # Export
 # ---------------------------------------------------------------------------
 
+
 class TestExportAPI:
     async def test_export_returns_markdown(self, client):
         response = await client.get(
@@ -441,6 +449,7 @@ class TestExportAPI:
 # ---------------------------------------------------------------------------
 # Users
 # ---------------------------------------------------------------------------
+
 
 class TestUsersAPI:
     async def test_admin_can_list_users(self, client):
@@ -489,6 +498,7 @@ class TestUsersAPI:
 # ---------------------------------------------------------------------------
 # Tokens
 # ---------------------------------------------------------------------------
+
 
 class TestTokensAPI:
     async def test_admin_can_list_tokens(self, client):
@@ -584,6 +594,7 @@ class TestTokensAPI:
 # ---------------------------------------------------------------------------
 # Admin: stats, jobs
 # ---------------------------------------------------------------------------
+
 
 class TestAdminAPI:
     async def test_admin_can_get_stats(self, client):

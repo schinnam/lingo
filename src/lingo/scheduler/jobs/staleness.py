@@ -9,9 +9,10 @@ Algorithm:
 3. For each such term that has an owner with a slack_user_id, send a DM.
 4. Persist a Job row with progress_json.
 """
+
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 
@@ -44,7 +45,7 @@ async def run_staleness_job(
         async with session_factory() as sess:
             j = await sess.get(Job, job_id)
             j.status = JobStatus.completed
-            j.completed_at = datetime.now(timezone.utc)
+            j.completed_at = datetime.now(UTC)
             j.progress_json = {
                 "terms_flagged": terms_flagged,
                 "dms_sent": dms_sent,
@@ -54,13 +55,13 @@ async def run_staleness_job(
         async with session_factory() as sess:
             j = await sess.get(Job, job_id)
             j.status = JobStatus.failed
-            j.completed_at = datetime.now(timezone.utc)
+            j.completed_at = datetime.now(UTC)
             j.error = str(exc)
             await sess.commit()
 
 
 async def _flag_and_notify(*, session_factory, slack_client, stale_threshold_days: int):
-    threshold = datetime.now(timezone.utc) - timedelta(days=stale_threshold_days)
+    threshold = datetime.now(UTC) - timedelta(days=stale_threshold_days)
 
     # Find terms that are NOT already stale and whose last confirmation is old
     async with session_factory() as sess:

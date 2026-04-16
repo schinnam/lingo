@@ -1,16 +1,15 @@
 """Tests for CORS middleware configuration."""
-import pytest
-from httpx import AsyncClient, ASGITransport
 
-from lingo.main import app
+import pytest
+from httpx import ASGITransport, AsyncClient
+
 from lingo.config import settings
+from lingo.main import app
 
 
 @pytest.fixture
 async def client():
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as ac:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac
 
 

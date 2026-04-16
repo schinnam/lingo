@@ -1,12 +1,13 @@
 """Tests for voting mechanics and status auto-transitions."""
+
 import pytest
 
-from lingo.models import Vote, Term
+from lingo.models import Term, Vote
 from lingo.services.term_service import TermService
 from lingo.services.vote_service import (
-    VoteService,
     AlreadyVotedError,
     StatusTransition,
+    VoteService,
 )
 
 
@@ -35,6 +36,7 @@ class TestCastVote:
 
     async def test_vote_persisted_in_db(self, session, member_user):
         from sqlalchemy import select
+
         term_svc = TermService(session)
         vote_svc = VoteService(session, community_threshold=3, official_threshold=10)
 
@@ -43,9 +45,11 @@ class TestCastVote:
         )
         await vote_svc.vote(term_id=term.id, user_id=member_user.id)
 
-        row = (await session.execute(
-            select(Vote).where(Vote.term_id == term.id, Vote.user_id == member_user.id)
-        )).scalar_one_or_none()
+        row = (
+            await session.execute(
+                select(Vote).where(Vote.term_id == term.id, Vote.user_id == member_user.id)
+            )
+        ).scalar_one_or_none()
         assert row is not None
 
 
@@ -53,6 +57,7 @@ class TestStatusTransitions:
     async def _make_users(self, session, n: int):
         """Create n distinct users."""
         from lingo.models import User
+
         users = []
         for i in range(n):
             u = User(email=f"voter{i}@example.com", display_name=f"Voter {i}")
@@ -115,7 +120,9 @@ class TestStatusTransitions:
 
     async def test_votes_not_reversed_on_status_change(self, session, member_user):
         """Vote count is preserved; demotion doesn't reset votes."""
-        from sqlalchemy import select, func as sqlfunc
+        from sqlalchemy import func as sqlfunc
+        from sqlalchemy import select
+
         term_svc = TermService(session)
         vote_svc = VoteService(session, community_threshold=3, official_threshold=10)
 
@@ -131,15 +138,18 @@ class TestStatusTransitions:
         refreshed.status = "pending"
         await session.commit()
 
-        vote_count = (await session.execute(
-            select(sqlfunc.count()).select_from(Vote).where(Vote.term_id == term.id)
-        )).scalar()
+        vote_count = (
+            await session.execute(
+                select(sqlfunc.count()).select_from(Vote).where(Vote.term_id == term.id)
+            )
+        ).scalar()
         assert vote_count == 3
 
 
 class TestConcurrentVote:
     async def _make_users(self, session, n: int):
         from lingo.models import User
+
         users = []
         for i in range(n):
             u = User(email=f"concurrent{i}@example.com", display_name=f"CUser {i}")
@@ -153,6 +163,7 @@ class TestConcurrentVote:
     async def test_vote_concurrent_at_threshold(self, engine):
         """Two concurrent sessions both cast the threshold vote; status transitions exactly once."""
         from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
         from lingo.services.term_service import TermService
 
         factory = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
@@ -160,6 +171,7 @@ class TestConcurrentVote:
         # Setup: create term and pre-seed N-1 votes using a dedicated session
         async with factory() as setup_sess:
             from lingo.models import User
+
             creator = User(email="creator_c@example.com", display_name="Creator")
             setup_sess.add(creator)
             await setup_sess.commit()
@@ -211,20 +223,28 @@ class TestConcurrentVote:
         assert len(results) == 2, f"Expected 2 results, got {len(results)}, errors: {errors}"
 
         # Status must have transitioned exactly once — only one result should carry to_community
-        transitions = [r.transition for r in results if r.transition == StatusTransition.to_community]
+        transitions = [
+            r.transition for r in results if r.transition == StatusTransition.to_community
+        ]
         assert len(transitions) == 1, (
             f"Expected exactly 1 to_community transition, got {len(transitions)}: {[r.transition for r in results]}"
         )
 
         # Verify final DB state: status is community, vote count is 3
         async with factory() as verify_sess:
-            from sqlalchemy import select, func as sqlfunc
-            final_term = await verify_sess.get(Term, term_id)
-            assert final_term.status == "community", f"Expected 'community', got '{final_term.status}'"
+            from sqlalchemy import func as sqlfunc
+            from sqlalchemy import select
 
-            count = (await verify_sess.execute(
-                select(sqlfunc.count()).select_from(Vote).where(Vote.term_id == term_id)
-            )).scalar()
+            final_term = await verify_sess.get(Term, term_id)
+            assert final_term.status == "community", (
+                f"Expected 'community', got '{final_term.status}'"
+            )
+
+            count = (
+                await verify_sess.execute(
+                    select(sqlfunc.count()).select_from(Vote).where(Vote.term_id == term_id)
+                )
+            ).scalar()
             assert count == 3
 
 

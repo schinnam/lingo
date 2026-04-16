@@ -1,5 +1,5 @@
 """REST routes for /api/v1/terms."""
-from typing import Optional
+
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Body, HTTPException, Query, Request
@@ -17,9 +17,10 @@ from lingo.api.schemas import (
     TermUpdate,
     VoteResponse,
 )
-from lingo.slack.notifications import send_dispute_dm
-from lingo.models.vote import Vote
+from lingo.config import settings
 from lingo.models.term import Term as TermModel
+from lingo.models.vote import Vote
+from lingo.services.audit_service import AuditService
 from lingo.services.term_service import (
     AlreadyOwnedError,
     InvalidStatusTransitionError,
@@ -29,8 +30,7 @@ from lingo.services.term_service import (
     VersionConflictError,
 )
 from lingo.services.vote_service import AlreadyVotedError, VoteService
-from lingo.services.audit_service import AuditService
-from lingo.config import settings
+from lingo.slack.notifications import send_dispute_dm
 
 router = APIRouter(prefix="/api/v1/terms", tags=["terms"])
 
@@ -86,9 +86,9 @@ async def create_term(
 @router.get("", response_model=TermsListResponse)
 async def list_terms(
     session: SessionDep,
-    q: Optional[str] = Query(None),
-    status: Optional[str] = Query(None),
-    category: Optional[str] = Query(None),
+    q: str | None = Query(None),
+    status: str | None = Query(None),
+    category: str | None = Query(None),
     limit: int = Query(100, le=500),
     offset: int = Query(0),
 ):
@@ -110,9 +110,7 @@ async def list_terms(
     total = (await session.execute(count_stmt)).scalar() or 0
     # Per-status counts (filtered by q/category but not by status)
     status_count_stmt = (
-        select(TermModel.status, func.count())
-        .select_from(TermModel)
-        .group_by(TermModel.status)
+        select(TermModel.status, func.count()).select_from(TermModel).group_by(TermModel.status)
     )
     if category is not None:
         status_count_stmt = status_count_stmt.where(TermModel.category == category)
@@ -128,7 +126,9 @@ async def list_terms(
     for t in terms:
         vc = await _count_votes(session, t.id)
         results.append(_term_to_response(t, vc))
-    return TermsListResponse(items=results, total=total, offset=offset, limit=limit, counts_by_status=counts_by_status)
+    return TermsListResponse(
+        items=results, total=total, offset=offset, limit=limit, counts_by_status=counts_by_status
+    )
 
 
 @router.get("/{term_id}", response_model=TermResponse)
@@ -197,7 +197,9 @@ async def delete_term(
     )
 
 
-@router.post("/{term_id}/vote", response_model=VoteResponse, dependencies=[require_feature("voting")])
+@router.post(
+    "/{term_id}/vote", response_model=VoteResponse, dependencies=[require_feature("voting")]
+)
 async def vote_term(
     term_id: UUID,
     session: SessionDep,
@@ -239,13 +241,16 @@ async def dispute_term(
     """Flag a term as disputed. Records the dispute and notifies the owner via Slack DM."""
     svc = TermService(session)
     try:
-        term = await svc.dispute(term_id=term_id, by_user=current_user.id, comment=body.comment or "")
+        term = await svc.dispute(
+            term_id=term_id, by_user=current_user.id, comment=body.comment or ""
+        )
     except TermNotFoundError:
         raise HTTPException(status_code=404, detail="Term not found")
 
     slack_client = getattr(request.app.state, "slack_client", None)
     if slack_client is not None:
         from lingo.db.session import SessionFactory
+
         background_tasks.add_task(
             send_dispute_dm,
             term_id=term.id,
@@ -259,7 +264,9 @@ async def dispute_term(
     return _term_to_response(term, vc)
 
 
-@router.post("/{term_id}/official", response_model=TermResponse, dependencies=[require_feature("voting")])
+@router.post(
+    "/{term_id}/official", response_model=TermResponse, dependencies=[require_feature("voting")]
+)
 async def mark_official(
     term_id: UUID,
     session: SessionDep,
@@ -281,7 +288,11 @@ async def mark_official(
     return _term_to_response(term, vc)
 
 
-@router.post("/{term_id}/confirm", response_model=TermResponse, dependencies=[require_feature("staleness")])
+@router.post(
+    "/{term_id}/confirm",
+    response_model=TermResponse,
+    dependencies=[require_feature("staleness")],
+)
 async def confirm_term(
     term_id: UUID,
     session: SessionDep,
@@ -344,7 +355,12 @@ async def revert_term(
     return _term_to_response(term, vc)
 
 
-@router.post("/{term_id}/relationships", status_code=201, response_model=RelationshipResponse, dependencies=[require_feature("relationships")])
+@router.post(
+    "/{term_id}/relationships",
+    status_code=201,
+    response_model=RelationshipResponse,
+    dependencies=[require_feature("relationships")],
+)
 async def add_relationship(
     term_id: UUID,
     body: RelationshipCreate,
@@ -364,7 +380,11 @@ async def add_relationship(
     return rel
 
 
-@router.delete("/{term_id}/relationships/{rel_id}", status_code=204, dependencies=[require_feature("relationships")])
+@router.delete(
+    "/{term_id}/relationships/{rel_id}",
+    status_code=204,
+    dependencies=[require_feature("relationships")],
+)
 async def delete_relationship(
     term_id: UUID,
     rel_id: UUID,
@@ -378,7 +398,9 @@ async def delete_relationship(
         raise HTTPException(status_code=404, detail="Relationship not found")
 
 
-@router.post("/{term_id}/promote", response_model=TermResponse, dependencies=[require_feature("voting")])
+@router.post(
+    "/{term_id}/promote", response_model=TermResponse, dependencies=[require_feature("voting")]
+)
 async def promote_term(
     term_id: UUID,
     session: SessionDep,
