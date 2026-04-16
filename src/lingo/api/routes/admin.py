@@ -1,13 +1,14 @@
 """REST routes for /api/v1/admin."""
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import func, select
 
 from lingo.api.deps import AdminUser, SessionDep
-from lingo.api.schemas import JobResponse, StatsResponse
+from lingo.api.schemas import AuditEventResponse, JobResponse, StatsResponse
 from lingo.models.job import Job, JobType
 from lingo.models.term import Term
 from lingo.models.user import User
 from lingo.models.vote import Vote
+from lingo.services.audit_service import AuditService
 
 router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
 
@@ -44,6 +45,17 @@ async def get_stats(session: SessionDep, admin: AdminUser):
 async def list_jobs(session: SessionDep, admin: AdminUser):
     result = await session.execute(select(Job).order_by(Job.started_at.desc()))
     return list(result.scalars().all())
+
+
+@router.get("/audit", response_model=list[AuditEventResponse])
+async def list_audit_events(
+    session: SessionDep,
+    admin: AdminUser,
+    limit: int = Query(100, le=500),
+    offset: int = Query(0),
+):
+    svc = AuditService(session)
+    return await svc.list(limit=limit, offset=offset)
 
 
 @router.post("/jobs/{job_type}/run", status_code=202, response_model=JobResponse)

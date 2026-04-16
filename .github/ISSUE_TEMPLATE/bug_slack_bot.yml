@@ -1,0 +1,90 @@
+name: "Bug Report: Slack Bot"
+description: Report a problem with the Lingo Slack bot
+title: "bug(slack): "
+labels: ["bug", "slack-bot"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a Slack bot issue. Please fill in as much detail as possible so we can reproduce and fix it quickly.
+
+  - type: input
+    id: workspace
+    attributes:
+      label: Slack Workspace / Organization
+      description: Name or domain of the workspace where the bot is installed (e.g. `acme.slack.com`)
+      placeholder: acme.slack.com
+    validations:
+      required: true
+
+  - type: input
+    id: command
+    attributes:
+      label: Command Used
+      description: The exact `/lingo` command that triggered the issue
+      placeholder: "/lingo define API"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: socket_mode
+    attributes:
+      label: Socket Mode Enabled?
+      description: Is `SLACK_APP_TOKEN` set and Socket Mode enabled in your Slack App config?
+      options:
+        - "Yes"
+        - "No"
+        - "Unknown"
+    validations:
+      required: true
+
+  - type: textarea
+    id: token_scopes
+    attributes:
+      label: Bot Token Scopes
+      description: List the OAuth scopes your bot token has (found in Slack App settings → OAuth & Permissions)
+      placeholder: |
+        app_mentions:read
+        channels:history
+        chat:write
+        commands
+    validations:
+      required: false
+
+  - type: textarea
+    id: error_output
+    attributes:
+      label: Error Output
+      description: Paste the full error message or unexpected bot response. Include server logs if available.
+      render: shell
+    validations:
+      required: true
+
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment Method
+      options:
+        - Docker (docker-compose)
+        - Bare metal / virtualenv
+        - Cloud (AWS / GCP / Azure / Railway / Fly.io / other)
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: lingo_version
+    attributes:
+      label: Lingo Version
+      description: Output of `uv run lingo --version` or the Docker image tag
+      placeholder: "0.3.1"
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional Context
+      description: Anything else that might help — environment variables set (redact secrets), recent config changes, etc.
+    validations:
+      required: false

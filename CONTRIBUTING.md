@@ -93,6 +93,64 @@ Follow red/green TDD: write a failing test first, then implement. PRs without te
 
 Always write both `upgrade()` and `downgrade()` in migrations. Missing `downgrade()` that drops enum types causes "type already exists" errors on re-upgrade — see CHANGELOG for prior incident.
 
+## Making Database Schema Changes
+
+If you modify any SQLAlchemy model in `src/lingo/models/`, you must generate
+a migration script:
+
+1. Make your model changes
+2. Generate the migration:
+   ```bash
+   uv run alembic revision --autogenerate -m "describe your change"
+   ```
+3. Review the generated file in `alembic/versions/` — autogenerate is not perfect
+4. Test the migration applies cleanly:
+   ```bash
+   uv run alembic upgrade head
+   ```
+5. Commit both the model change and the migration file together
+
+Always write both `upgrade()` and `downgrade()` in migrations. Missing `downgrade()` that drops enum types causes "type already exists" errors on re-upgrade.
+
+## Frontend Changes
+
+The frontend (React/TypeScript) lives in `frontend/` and is served as static
+files by FastAPI from `src/lingo/static/`.
+
+After making frontend changes, rebuild before committing:
+
+```bash
+cd frontend && npm run build
+```
+
+The built assets in `src/lingo/static/` must be committed alongside source changes.
+Run `npm run dev` for hot-reload during development (proxies API calls to `localhost:8000`).
+
+## Releasing a New Version
+
+Lingo exposes multiple versioned surfaces — the REST API (`/api/v1/`), Slack command syntax, and MCP tool definitions. A breaking change to any of them warrants a major version bump.
+
+### Semantic Versioning policy
+
+| Change | Version Bump |
+|--------|-------------|
+| Breaking change to `/api/v1/` response schema | MAJOR |
+| Breaking change to Slack command syntax | MAJOR |
+| Breaking change to MCP tool definitions | MAJOR |
+| New API endpoint, Slack command, or MCP tool | MINOR |
+| New config option (backwards-compatible) | MINOR |
+| Bug fix, dependency update, docs | PATCH |
+
+### Release steps
+
+1. Update `version` in `pyproject.toml`
+2. Update `CHANGELOG.md` — move Unreleased items under the new version heading with today's date
+3. Commit: `git commit -m "chore: release vX.Y.Z"`
+4. Tag: `git tag vX.Y.Z`
+5. Push tag: `git push origin vX.Y.Z`
+6. Create a GitHub Release from the tag — paste the CHANGELOG section as release notes
+   The Docker image will be published automatically (see workflow #73)
+
 ## Submitting a PR
 
 1. Branch off `main`.

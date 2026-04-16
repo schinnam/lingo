@@ -1,0 +1,93 @@
+name: "Bug Report: Web UI"
+description: Report a problem with the Lingo web interface
+title: "bug(ui): "
+labels: ["bug", "web-ui"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a Web UI issue. Browser and console details are especially helpful here.
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser & Version
+      description: e.g. Chrome 124, Firefox 126, Safari 17.4
+      placeholder: "Chrome 124"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment Method
+      options:
+        - Docker (docker-compose)
+        - Bare metal / virtualenv (FastAPI serves built frontend)
+        - Vite dev server (`npm run dev`)
+        - Cloud (AWS / GCP / Azure / Railway / Fly.io / other)
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Clear, numbered steps that reliably trigger the bug
+      placeholder: |
+        1. Open http://localhost:8000
+        2. Click "Add Term"
+        3. Fill in the form and submit
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What should happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happens?
+    validations:
+      required: true
+
+  - type: textarea
+    id: console_errors
+    attributes:
+      label: Browser Console Errors
+      description: Open DevTools → Console and paste any errors or warnings
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot or Screen Recording
+      description: Drag and drop an image or paste a link. Optional but very helpful.
+    validations:
+      required: false
+
+  - type: input
+    id: lingo_version
+    attributes:
+      label: Lingo Version
+      description: Output of `uv run lingo --version` or the Docker image tag
+      placeholder: "0.3.1"
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional Context
+    validations:
+      required: false

@@ -311,3 +311,73 @@ class TestExport:
         assert result.exit_code == 0
         call_kwargs = mock_client.get.call_args
         assert "community" in str(call_kwargs)
+
+
+# ---------------------------------------------------------------------------
+# --json flag
+# ---------------------------------------------------------------------------
+
+
+class TestJsonFlag:
+    _term = {
+        "id": "00000000-0000-0000-0000-000000000001",
+        "name": "BART",
+        "full_name": "Business Arts Resource Tool",
+        "definition": "A centralized hub for resource allocation.",
+        "category": "Operations",
+        "status": "official",
+        "vote_count": 12,
+        "is_stale": False,
+        "version": 1,
+        "source": "user",
+        "owner_id": None,
+    }
+
+    def test_define_json_output(self):
+        import json
+        with patch("lingo.cli.main.httpx.Client") as mock_client_cls:
+            mock_client = mock_client_cls.return_value.__enter__.return_value
+            mock_client.get.return_value = _mock_response(_terms_envelope([self._term]))
+            result = runner.invoke(app, ["define", "BART", "--json"])
+
+        assert result.exit_code == 0
+        parsed = json.loads(result.output)
+        assert parsed["name"] == "BART"
+        assert parsed["status"] == "official"
+
+    def test_define_json_no_rich_markup(self):
+        with patch("lingo.cli.main.httpx.Client") as mock_client_cls:
+            mock_client = mock_client_cls.return_value.__enter__.return_value
+            mock_client.get.return_value = _mock_response(_terms_envelope([self._term]))
+            result = runner.invoke(app, ["define", "BART", "--json"])
+
+        assert result.exit_code == 0
+        # JSON output should not contain rich markup characters
+        assert "[bold]" not in result.output
+        assert "┌─" not in result.output
+
+    def test_list_json_output(self):
+        import json
+        terms = [self._term, {**self._term, "name": "BETA", "id": "00000000-0000-0000-0000-000000000002"}]
+        with patch("lingo.cli.main.httpx.Client") as mock_client_cls:
+            mock_client = mock_client_cls.return_value.__enter__.return_value
+            mock_client.get.return_value = _mock_response(_terms_envelope(terms))
+            result = runner.invoke(app, ["list", "--json"])
+
+        assert result.exit_code == 0
+        parsed = json.loads(result.output)
+        assert isinstance(parsed, list)
+        assert len(parsed) == 2
+        assert parsed[0]["name"] == "BART"
+        assert parsed[1]["name"] == "BETA"
+
+    def test_list_json_empty(self):
+        import json
+        with patch("lingo.cli.main.httpx.Client") as mock_client_cls:
+            mock_client = mock_client_cls.return_value.__enter__.return_value
+            mock_client.get.return_value = _mock_response(_terms_envelope([]))
+            result = runner.invoke(app, ["list", "--json"])
+
+        assert result.exit_code == 0
+        parsed = json.loads(result.output)
+        assert parsed == []

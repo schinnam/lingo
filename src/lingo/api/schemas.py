@@ -1,4 +1,5 @@
 """Pydantic request/response schemas."""
+from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
@@ -157,5 +158,21 @@ class JobResponse(BaseModel):
     status: str
     progress_json: Optional[dict]
     error: Optional[str]
+
+    model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
+# Audit schemas
+# ---------------------------------------------------------------------------
+
+class AuditEventResponse(BaseModel):
+    id: UUID
+    actor_id: Optional[UUID]
+    action: str
+    target_type: Optional[str]
+    target_id: Optional[UUID]
+    payload: Optional[dict]
+    created_at: datetime
 
     model_config = {"from_attributes": True}

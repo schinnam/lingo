@@ -237,6 +237,58 @@ class TestExportAPI:
         )
         assert response.status_code == 200
 
+    async def test_no_truncated_header_when_within_cap(self, client):
+        # Create 3 terms (status=pending by default) — well within the 500-term cap
+        for i in range(3):
+            await client.post(
+                "/api/v1/terms",
+                json={"name": f"TermExport{i}", "definition": f"def {i}"},
+                headers={"X-User-Id": client._admin_id},
+            )
+        response = await client.get(
+            "/api/v1/export?status=pending",
+            headers={"X-User-Id": client._admin_id},
+        )
+        assert response.status_code == 200
+        assert "lingo-truncated" not in response.headers
+
+    async def test_truncated_header_when_cap_exceeded(self, client):
+        # Create 4 terms but request only 2 — simulates hitting the cap
+        for i in range(4):
+            await client.post(
+                "/api/v1/terms",
+                json={"name": f"TermCap{i}", "definition": f"def {i}"},
+                headers={"X-User-Id": client._admin_id},
+            )
+        response = await client.get(
+            "/api/v1/export?status=pending&limit=2",
+            headers={"X-User-Id": client._admin_id},
+        )
+        assert response.status_code == 200
+        assert response.headers.get("lingo-truncated") == "true"
+
+    async def test_offset_pagination_returns_remaining_terms(self, client):
+        for i in range(3):
+            await client.post(
+                "/api/v1/terms",
+                json={"name": f"TermPage{i}", "definition": f"def {i}"},
+                headers={"X-User-Id": client._admin_id},
+            )
+        # First page: limit=2
+        first = await client.get(
+            "/api/v1/export?status=pending&limit=2",
+            headers={"X-User-Id": client._admin_id},
+        )
+        # Second page: offset=2
+        second = await client.get(
+            "/api/v1/export?status=pending&limit=2&offset=2",
+            headers={"X-User-Id": client._admin_id},
+        )
+        assert first.status_code == 200
+        assert second.status_code == 200
+        assert first.headers.get("lingo-truncated") == "true"
+        assert "lingo-truncated" not in second.headers
+
 
 class TestVoteAPI:
     async def test_vote_on_term(self, client):

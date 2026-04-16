@@ -1,0 +1,90 @@
+name: "Bug Report: MCP Server"
+description: Report a problem with the Lingo MCP server
+title: "bug(mcp): "
+labels: ["bug", "mcp"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting an MCP server issue. Please include request/response details so we can reproduce the problem.
+
+  - type: dropdown
+    id: mcp_client
+    attributes:
+      label: MCP Client
+      description: Which MCP client are you using to connect to Lingo?
+      options:
+        - Claude Desktop
+        - Continue (VS Code)
+        - Cursor
+        - Custom / other
+    validations:
+      required: true
+
+  - type: input
+    id: tool_called
+    attributes:
+      label: MCP Tool Called
+      description: Which Lingo MCP tool triggered the issue? (e.g. `get_term`, `search_terms`, `list_terms`)
+      placeholder: get_term
+    validations:
+      required: true
+
+  - type: textarea
+    id: request
+    attributes:
+      label: Request / Tool Input
+      description: Paste the JSON arguments sent to the tool
+      render: json
+    validations:
+      required: true
+
+  - type: textarea
+    id: response
+    attributes:
+      label: Response / Error
+      description: Paste the full response or error message returned by the server
+      render: json
+    validations:
+      required: true
+
+  - type: dropdown
+    id: bearer_token
+    attributes:
+      label: Bearer Token Configured?
+      description: Is `LINGO_MCP_TOKEN` set and passed as `Authorization: Bearer <token>` in your MCP client config?
+      options:
+        - "Yes"
+        - "No — running without auth"
+        - "Unknown"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment Method
+      options:
+        - Docker (docker-compose)
+        - Bare metal / virtualenv
+        - Cloud (AWS / GCP / Azure / Railway / Fly.io / other)
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: lingo_version
+    attributes:
+      label: Lingo Version
+      description: Output of `uv run lingo --version` or the Docker image tag
+      placeholder: "0.3.1"
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional Context
+      description: Server logs, MCP client config snippets (redact secrets), or anything else relevant
+    validations:
+      required: false
