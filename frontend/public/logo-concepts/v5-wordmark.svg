@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="60" viewBox="0 0 200 60">
+  <rect width="200" height="60" fill="#1a1a2e"/>
+  <!-- Compact L mark -->
+  <rect x="12" y="8" width="8" height="40" rx="2" fill="#00d4aa"/>
+  <rect x="12" y="40" width="28" height="8" rx="2" fill="#00d4aa"/>
+  <!-- Thin separator line between mark and wordmark -->
+  <rect x="50" y="14" width="1.5" height="28" fill="#00d4aa" opacity="0.3"/>
+  <!-- Wordmark — monospace, all lowercase, light gray -->
+  <text
+    x="62"
+    y="41"
+    font-family="'JetBrains Mono', 'Fira Code', 'Courier New', monospace"
+    font-size="26"
+    font-weight="400"
+    letter-spacing="2"
+    fill="#e0e0e0"
+  >lingo</text>
+</svg>

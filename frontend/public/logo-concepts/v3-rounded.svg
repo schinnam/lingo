@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <rect width="64" height="64" fill="#1a1a2e"/>
+  <!-- Overlapping rects give rounded outer corners with a clean inner junction -->
+  <!-- Vertical stem -->
+  <rect x="14" y="10" width="9" height="44" rx="3" fill="#00d4aa"/>
+  <!-- Horizontal foot (starts at stem origin so overlap covers inner corner) -->
+  <rect x="14" y="45" width="36" height="9" rx="3" fill="#00d4aa"/>
+</svg>
