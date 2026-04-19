@@ -95,6 +95,9 @@ async def dev_login(
         await session.refresh(user)
 
     request.session["user_id"] = str(user.id)
+
+    if "application/json" in request.headers.get("accept", ""):
+        return {"id": str(user.id), "email": user.email}
     return RedirectResponse(url="/")
 
 

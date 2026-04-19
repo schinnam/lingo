@@ -4,7 +4,10 @@ Entry point: `lingo` (configured in pyproject.toml [project.scripts])
 
 Configuration via environment variables:
   LINGO_APP_URL    — base URL of the Lingo server (default: http://localhost:8000)
-  LINGO_API_TOKEN  — bearer token for authentication (optional in dev mode)
+  LINGO_API_TOKEN  — bearer token for authentication
+
+In dev mode, run `lingo login <email>` to authenticate without an API token.
+Credentials are stored in ~/.config/lingo/credentials.json.
 """
 
 from __future__ import annotations
@@ -17,6 +20,27 @@ import httpx
 import typer
 from rich.console import Console
 from rich.table import Table
+
+
+def _config_path() -> Path:
+    config_dir = Path.home() / ".config" / "lingo"
+    config_dir.mkdir(parents=True, exist_ok=True)
+    return config_dir / "credentials.json"
+
+
+def _load_credentials() -> dict:
+    path = _config_path()
+    if path.exists():
+        try:
+            return json.loads(path.read_text())
+        except Exception:
+            return {}
+    return {}
+
+
+def _save_credentials(data: dict) -> None:
+    _config_path().write_text(json.dumps(data, indent=2))
+
 
 app = typer.Typer(
     name="lingo",
@@ -39,10 +63,12 @@ def _headers() -> dict:
     token = os.environ.get("LINGO_API_TOKEN", "")
     if token:
         return {"Authorization": f"Bearer {token}"}
-    # Dev mode: use a dummy user ID header
     dev_user = os.environ.get("LINGO_DEV_USER_ID", "")
     if dev_user:
         return {"X-User-Id": dev_user}
+    creds = _load_credentials()
+    if creds.get("user_id"):
+        return {"X-User-Id": creds["user_id"]}
     return {}
 
 
@@ -52,6 +78,36 @@ def _client() -> httpx.Client:
         headers=_headers(),
         timeout=_DEFAULT_TIMEOUT,
     )
+
+
+# ---------------------------------------------------------------------------
+# login
+# ---------------------------------------------------------------------------
+
+
+@app.command()
+def login(
+    email: str = typer.Argument(..., help="Email address (dev mode only)"),
+):
+    """Log in to the Lingo server. Dev mode only: creates/finds user by email."""
+    with httpx.Client(base_url=_base_url(), timeout=_DEFAULT_TIMEOUT) as client:
+        try:
+            resp = client.get(
+                "auth/dev/login",
+                params={"email": email},
+                headers={"Accept": "application/json"},
+            )
+            resp.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 404:
+                err_console.print("Error: server is not in dev mode. Set LINGO_API_TOKEN instead.")
+            else:
+                err_console.print(f"API error: {exc.response.status_code}")
+            raise typer.Exit(1)
+
+    data = resp.json()
+    _save_credentials({"user_id": data["id"], "email": data["email"]})
+    console.print(f"[green]Logged in as[/green] {data['email']}")
 
 
 # ---------------------------------------------------------------------------
