@@ -95,7 +95,7 @@ def login(
             resp = client.get(
                 "auth/dev/login",
                 params={"email": email},
-                headers={"Accept": "application/json"},
+                headers={"X-Lingo-Dev-Auth": "true"},
             )
             resp.raise_for_status()
         except httpx.HTTPStatusError as exc:

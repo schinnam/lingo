@@ -38,6 +38,7 @@ async def client(test_session_factory):
             yield sess
 
     app.dependency_overrides[get_session] = _override_get_session
+    original_dev_mode = settings.dev_mode
     settings.dev_mode = True
 
     async with test_session_factory() as sess:
@@ -59,7 +60,7 @@ async def client(test_session_factory):
         yield ac
 
     app.dependency_overrides.clear()
-    settings.dev_mode = False
+    settings.dev_mode = original_dev_mode
 
 
 async def _create_term(client, name="TERM", definition="A term", user_id=None):

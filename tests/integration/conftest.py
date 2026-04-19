@@ -41,7 +41,11 @@ app.router.lifespan_context = _test_lifespan
 
 @pytest.fixture(scope="session", autouse=True)
 def run_migrations():
-    env = {**os.environ, "LINGO_DATABASE_URL": TEST_DATABASE_URL}
+    env = {
+        **os.environ,
+        "LINGO_DATABASE_URL": TEST_DATABASE_URL,
+        "LINGO_DEV_MODE": "true",
+    }
     repo_root = Path(__file__).parent.parent.parent
     result = subprocess.run(
         ["uv", "run", "alembic", "upgrade", "head"],

@@ -2,4 +2,4 @@
 
 import os
 
-os.environ.setdefault("LINGO_DEV_MODE", "true")
+os.environ["LINGO_DEV_MODE"] = "true"

@@ -3,6 +3,20 @@
 All notable changes to Lingo are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.7.3] - 2026-04-19
+
+### Added
+- **Dev mode custom auth header:** Added support for a custom `X-Lingo-Dev-Auth: true` header on the `GET /auth/dev/login` endpoint. When present, the server returns a JSON response containing the user's ID and email instead of a browser redirect, enabling a reliable login flow for the CLI. (#61)
+- **New Test Suite:** Added `tests/unit/test_dev_auth.py` to verify the new header behavior and production-mode security guards. (#62)
+
+### Changed
+- **CLI `login` command:** Updated the `lingo login` command to use the new `X-Lingo-Dev-Auth` header. This allows developers to authenticate and persist their session in `~/.config/lingo/credentials.json` with a single command, without manually exporting environment variables. (#61)
+- **Documentation — Dev Auth:** Updated the **Quickstart** and **CLI** guides to recommend the `lingo login` workflow for dev mode, replacing the previous instructions for manual `LINGO_DEV_USER_ID` management. (#63)
+
+### Internal
+- **Test suite stability:** Fixed a critical issue where unit tests were contaminating the global `settings.dev_mode` state, causing subsequent integration tests to fail with 401 errors. Fixtures now correctly restore the original state. (#64)
+- **Integration test reliability:** Updated `tests/integration/conftest.py` to explicitly propagate `LINGO_DEV_MODE=true` to the `alembic` subprocess during test database migrations, preventing validation errors about missing production secret keys. (#64)
+
 ## [0.7.2] - 2026-04-11
 
 ### Added
