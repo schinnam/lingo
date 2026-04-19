@@ -61,6 +61,7 @@ X-User-Id: <any-uuid>
 
 | Method | Path | Description |
 |---|---|---|
+| `GET` | `/api/v1/tokens` | List your API tokens. |
 | `POST` | `/api/v1/tokens` | Create an API bearer token. |
 | `DELETE` | `/api/v1/tokens/{id}` | Revoke a token. |
 
@@ -70,7 +71,8 @@ X-User-Id: <any-uuid>
 |---|---|---|
 | `GET` | `/api/v1/admin/stats` | Term and user counts (admin only). |
 | `GET` | `/api/v1/admin/jobs` | Scheduler job run history (admin only). |
-| `POST` | `/api/v1/admin/jobs/{type}/trigger` | Manually trigger a scheduler job (admin only). |
+| `POST` | `/api/v1/admin/jobs/{job_type}/run` | Manually trigger a scheduler job (admin only). |
+| `GET` | `/api/v1/admin/audit` | List audit events (admin only). |
 
 ### Other
 
