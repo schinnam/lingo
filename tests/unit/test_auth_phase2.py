@@ -56,6 +56,7 @@ async def client(test_session_factory, db_users):
             yield sess
 
     app.dependency_overrides[get_session] = _override_get_session
+    original_dev_mode = settings.dev_mode
     settings.dev_mode = True
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
@@ -66,7 +67,7 @@ async def client(test_session_factory, db_users):
         yield ac
 
     app.dependency_overrides.clear()
-    settings.dev_mode = False
+    settings.dev_mode = original_dev_mode
 
 
 def _make_api_token(raw: str | None = None) -> tuple[str, str]:
@@ -233,6 +234,7 @@ class TestAuthMethodPriority:
 
     async def test_x_user_id_rejected_when_dev_mode_off(self, client):
         """X-User-Id must be rejected in production (dev_mode=False)."""
+        prev = settings.dev_mode
         settings.dev_mode = False
         try:
             resp = await client.get(
@@ -241,7 +243,7 @@ class TestAuthMethodPriority:
             )
             assert resp.status_code == 401
         finally:
-            settings.dev_mode = True  # restore for remaining tests in fixture
+            settings.dev_mode = prev
 
     async def test_both_auth_headers_bearer_wins(self, client, test_session_factory):
         """When both X-User-Id and Authorization: Bearer are provided, Bearer token wins."""
