@@ -19,9 +19,11 @@ async def test_engine():
     yield eng
     await eng.dispose()
 
+
 @pytest.fixture
 async def test_session_factory(test_engine):
     return async_sessionmaker(test_engine, expire_on_commit=False, class_=AsyncSession)
+
 
 @pytest.fixture
 async def client(test_session_factory):
@@ -47,6 +49,7 @@ async def client(test_session_factory):
     app.dependency_overrides.clear()
     settings.dev_mode = original_dev_mode
 
+
 class TestDevAuthHeader:
     async def test_dev_login_redirects_by_default(self, client):
         """By default, GET /auth/dev/login redirects to /."""
@@ -57,8 +60,7 @@ class TestDevAuthHeader:
     async def test_dev_login_returns_json_with_header(self, client):
         """With X-Lingo-Dev-Auth: true, GET /auth/dev/login returns JSON."""
         resp = await client.get(
-            "/auth/dev/login?email=dev@lingo.dev",
-            headers={"X-Lingo-Dev-Auth": "true"}
+            "/auth/dev/login?email=dev@lingo.dev", headers={"X-Lingo-Dev-Auth": "true"}
         )
         assert resp.status_code == 200
         data = resp.json()

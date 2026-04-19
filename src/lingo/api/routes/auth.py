@@ -104,7 +104,6 @@ async def dev_login(
     return RedirectResponse(url="/")
 
 
-
 @router.post("/auth/logout")
 async def logout(request: Request):
     request.session.clear()
