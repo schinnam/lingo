@@ -10,11 +10,7 @@ The `lingo` command-line tool lets you look up, add, list, and export terms from
 uv pip install -e .
 ```
 
-Or with pip:
-
-```bash
-pip install -e .
-```
+This installs into the project virtualenv. Run commands via `uv run lingo` from the repo directory, or install globally with `uv tool install .` to get a bare `lingo` command anywhere in your shell.
 
 ---
 
@@ -76,7 +72,7 @@ lingo add "SLA" "Service Level Agreement" \
 | `--full-name TEXT` | Expanded form of the acronym |
 | `--category TEXT` | Grouping label |
 
-New terms are created with `suggested` status.
+New terms are created with `pending` status.
 
 ---
 
@@ -99,7 +95,7 @@ lingo list --limit 20
 |---|---|---|
 | `--status TEXT` | (all) | Filter by status: `suggested`, `pending`, `community`, `official` |
 | `--category TEXT` | (all) | Filter by category |
-| `--limit INT` | 100 | Maximum number of results |
+| `--limit INT` | 50 | Maximum number of results |
 
 ---
 

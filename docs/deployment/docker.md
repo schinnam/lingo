@@ -6,12 +6,12 @@ Lingo ships as a single Docker image containing the Python backend and pre-built
 
 ## Docker Compose (quickest)
 
-The repository includes a `docker-compose.yml` that starts PostgreSQL and Lingo together:
+The repository includes a `docker compose.yml` that starts PostgreSQL and Lingo together:
 
 ```bash
 git clone https://github.com/schinnam/lingo
 cd lingo
-docker-compose up
+docker compose up
 ```
 
 Server: `http://localhost:8000`
@@ -21,14 +21,14 @@ The compose file sets `LINGO_DEV_MODE=true` by default. This is fine for local e
 ### Run in the background
 
 ```bash
-docker-compose up -d
-docker-compose logs -f lingo
+docker compose up -d
+docker compose logs -f lingo
 ```
 
 ### Stop
 
 ```bash
-docker-compose down
+docker compose down
 ```
 
 ---
@@ -75,7 +75,7 @@ docker run -p 8000:8000 \
 
 ## Environment variables via compose override
 
-For development environments with different settings, use a `docker-compose.override.yml`:
+For development environments with different settings, use a `docker compose.override.yml`:
 
 ```yaml
 services:

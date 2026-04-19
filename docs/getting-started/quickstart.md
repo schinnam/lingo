@@ -7,7 +7,7 @@ Get Lingo running and add your first term in under five minutes.
 ```bash
 git clone https://github.com/schinnam/lingo
 cd lingo
-docker-compose up
+docker compose up
 ```
 
 Wait for the log line `Application startup complete.` The server is now at `http://localhost:8000`.

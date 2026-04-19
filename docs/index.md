@@ -19,7 +19,7 @@ Teams accumulate jargon fast. Lingo is where you put it. Add a term from Slack, 
 | **MCP Server** | `get_term`, `search_terms`, `list_terms` tools for Claude and other MCP-aware AI agents |
 | **Auto-Discovery** | Daily job scans Slack for unknown acronyms and creates `suggested` terms automatically |
 | **Staleness Tracking** | Weekly job DMs term owners when a term hasn't been confirmed in 180 days |
-| **Self-Hosted** | One `docker-compose up` and you're running. PostgreSQL + Lingo, no external dependencies |
+| **Self-Hosted** | One `docker compose up` starts PostgreSQL + Lingo together. No external dependencies |
 
 ---
 
@@ -29,14 +29,11 @@ Every term flows through four community-driven statuses:
 
 ```
 suggested  →  pending  →  community  →  official
-              ↑                ↑
-        (first vote)   (community_threshold votes)
-                                           ↓
-                              (editor action at official_threshold)
+           (promote)   (3 votes)   (editor + 10 votes)
 ```
 
-- **suggested** — discovered by auto-scan or added without votes
-- **pending** — at least one community vote
+- **suggested** — discovered by the auto-scan job; must be promoted before voting applies
+- **pending** — starting status for user-added terms; voting is active
 - **community** — vote count reached `LINGO_COMMUNITY_THRESHOLD` (default: 3)
 - **official** — editor-approved, vote count reached `LINGO_OFFICIAL_THRESHOLD` (default: 10)
 
@@ -47,7 +44,7 @@ suggested  →  pending  →  community  →  official
 ```bash
 git clone https://github.com/schinnam/lingo
 cd lingo
-docker-compose up
+docker compose up
 ```
 
 Open `http://localhost:8000`. Dev mode is on by default in the compose file, so no auth is required.

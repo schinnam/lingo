@@ -27,7 +27,7 @@ Clone the repository and start everything with one command:
 ```bash
 git clone https://github.com/schinnam/lingo
 cd lingo
-docker-compose up
+docker compose up
 ```
 
 This starts:
@@ -46,7 +46,7 @@ Use this when you want to iterate on the backend with hot-reload.
 ### 1. Start a database
 
 ```bash
-docker-compose up postgres -d
+docker compose up postgres -d
 ```
 
 Or point `LINGO_DATABASE_URL` at any running Postgres instance.
@@ -60,7 +60,7 @@ uv sync
 ### 3. Run database migrations
 
 ```bash
-uv run alembic upgrade head
+LINGO_DEV_MODE=true uv run alembic upgrade head
 ```
 
 ### 4. Start the server

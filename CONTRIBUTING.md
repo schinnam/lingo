@@ -14,11 +14,11 @@ git clone https://github.com/schinnam/lingo
 cd lingo
 
 # Start Postgres
-docker-compose up postgres -d
+docker compose up postgres -d
 
 # Install dependencies and run migrations
 uv sync
-uv run alembic upgrade head
+LINGO_DEV_MODE=true uv run alembic upgrade head
 
 # Start the server
 LINGO_DEV_MODE=true uv run uvicorn lingo.main:app --reload
