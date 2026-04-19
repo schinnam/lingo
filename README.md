@@ -18,7 +18,7 @@ Teams grow and accumulate jargon fast. Lingo is where you put it. Add a term fro
 - **Auto-discovery** — daily job scans Slack for unknown acronyms and creates `suggested` terms
 - **Staleness tracking** — weekly job DMs term owners when a term hasn't been confirmed in 180 days
 
-Terms flow through four statuses: `suggested` → `pending` → `community` → `official`.
+Terms flow through statuses: `suggested` → `pending` → `community` → `official`. User-added terms start at `pending`; `suggested` is reserved for auto-discovered terms.
 
 ---
 
@@ -29,7 +29,7 @@ The fastest path: PostgreSQL + Lingo server with one command.
 ```bash
 git clone https://github.com/schinnam/lingo
 cd lingo
-docker-compose up
+docker compose up
 ```
 
 The server starts at `http://localhost:8000`. Dev mode is on by default in the compose file — visit `http://localhost:8000/auth/dev/login?email=you@example.com` to log in without Slack.
@@ -49,7 +49,7 @@ Open `http://localhost:8000` to see the web UI.
 ### 1. Start a database
 
 ```bash
-docker-compose up postgres -d
+docker compose up postgres -d
 ```
 
 Or use any Postgres instance and set `LINGO_DATABASE_URL` accordingly.
@@ -58,7 +58,7 @@ Or use any Postgres instance and set `LINGO_DATABASE_URL` accordingly.
 
 ```bash
 uv sync
-uv run alembic upgrade head
+LINGO_DEV_MODE=true uv run alembic upgrade head
 ```
 
 ### 3. Start the server

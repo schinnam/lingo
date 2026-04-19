@@ -7,7 +7,7 @@ Get Lingo running and add your first term in under five minutes.
 ```bash
 git clone https://github.com/schinnam/lingo
 cd lingo
-docker-compose up
+docker compose up
 ```
 
 Wait for the log line `Application startup complete.` The server is now at `http://localhost:8000`.
@@ -34,7 +34,7 @@ Click **Add term** and fill in:
 | **Full name** (optional) | `Application Programming Interface` |
 | **Category** (optional) | `tech` |
 
-Click **Add**. Your term is created with status `suggested`.
+Click **Add**. Your term is created with status `pending`.
 
 ---
 
@@ -43,9 +43,11 @@ Click **Add**. Your term is created with status `suggested`.
 Find your term in the list and click **Vote**. Once enough team members vote, the status advances automatically:
 
 ```
-suggested  →  pending  →  community  →  official
-              (1 vote)   (3 votes)    (editor + 10 votes)
+pending  →  community  →  official
+           (3 votes)    (editor action + 10 votes)
 ```
+
+Terms discovered by the auto-scan job start at `suggested` and must be promoted to `pending` (via the detail panel) before voting applies.
 
 ---
 

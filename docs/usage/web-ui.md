@@ -19,7 +19,7 @@ Below the search bar, filter pills let you narrow terms by status:
 | Status | Description |
 |---|---|
 | **All** | Show every term |
-| **Suggested** | Discovered by auto-scan or added without votes |
+| **Suggested** | Discovered by the auto-scan job; must be promoted before voting applies |
 | **Pending** | At least one community vote |
 | **Community** | Reached the community vote threshold |
 | **Official** | Editor-approved at the official vote threshold |
@@ -57,10 +57,11 @@ Clicking a term slides open a panel on the right with:
 Click **Vote** to upvote a term. The vote count updates immediately. When enough votes accumulate, the term status advances automatically:
 
 ```
-suggested → pending    (first vote)
 pending   → community  (community_threshold votes, default: 3)
 community → official   (editor action + official_threshold votes, default: 10)
 ```
+
+User-added terms start at `pending`. Auto-discovered (`suggested`) terms must be promoted to `pending` via the promote action before voting applies.
 
 ### Disputing
 
@@ -79,7 +80,7 @@ Click **Add term** (top-right) to open the form:
 | **Full name** | No | Expanded form (e.g. `Application Programming Interface`) |
 | **Category** | No | Grouping label (e.g. `tech`, `ops`, `product`) |
 
-New terms start as `suggested`. Submit the form and the term appears in the list immediately.
+New terms start as `pending`. Submit the form and the term appears in the list immediately.
 
 ---
 

@@ -130,7 +130,7 @@ APScheduler shares the FastAPI event loop. **You must run with `--workers 1`** t
 
 1. Pull the new image: `docker pull lingo` (or rebuild)
 2. Run migrations: `docker run --rm -e LINGO_DATABASE_URL=... lingo uv run alembic upgrade head`
-3. Restart the container: `docker stop lingo && docker run ...` (or `docker-compose up -d`)
+3. Restart the container: `docker stop lingo && docker run ...` (or `docker compose up -d`)
 
 Always run migrations before restarting the server after an upgrade.
 
