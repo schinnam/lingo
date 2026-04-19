@@ -41,6 +41,7 @@ def _load_credentials() -> dict:
 def _save_credentials(data: dict) -> None:
     _config_path().write_text(json.dumps(data, indent=2))
 
+
 app = typer.Typer(
     name="lingo",
     help="Lingo — company glossary CLI",
@@ -99,9 +100,7 @@ def login(
             resp.raise_for_status()
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code == 404:
-                err_console.print(
-                    "Error: server is not in dev mode. Set LINGO_API_TOKEN instead."
-                )
+                err_console.print("Error: server is not in dev mode. Set LINGO_API_TOKEN instead.")
             else:
                 err_console.print(f"API error: {exc.response.status_code}")
             raise typer.Exit(1)
