@@ -81,6 +81,7 @@ async def slack_callback(
 async def dev_login(
     request: Request,
     email: str,
+    format: str | None = None,
     session: AsyncSession = Depends(get_session),
 ):
     if not settings.dev_mode:
@@ -96,9 +97,12 @@ async def dev_login(
 
     request.session["user_id"] = str(user.id)
 
-    if "application/json" in request.headers.get("accept", ""):
+    # If the request comes from a dev tool (like the CLI), return JSON.
+    # Otherwise, redirect to the landing page.
+    if request.headers.get("x-lingo-dev-auth") == "true":
         return {"id": str(user.id), "email": user.email}
     return RedirectResponse(url="/")
+
 
 
 @router.post("/auth/logout")

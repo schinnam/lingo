@@ -31,9 +31,14 @@ export LINGO_APP_URL=http://localhost:8000
 
 === "Dev mode"
     ```bash
-    export LINGO_DEV_USER_ID=00000000-0000-0000-0000-000000000001   # any UUID
+    # Authenticate via email (no password needed in dev mode)
+    lingo login you@example.com
     ```
-    Only works when the server has `LINGO_DEV_MODE=true`.
+    Alternatively, for non-interactive use:
+    ```bash
+    export LINGO_DEV_USER_ID=00000000-0000-0000-0000-000000000001
+    ```
+    *Only works when the server has `LINGO_DEV_MODE=true`.*
 
 ---
 

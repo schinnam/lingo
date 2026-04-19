@@ -58,7 +58,9 @@ Install the CLI and look up the term you just added:
 ```bash
 uv pip install -e .
 export LINGO_APP_URL=http://localhost:8000
-export LINGO_DEV_USER_ID=00000000-0000-0000-0000-000000000001   # any UUID in dev mode
+
+# Authenticate in dev mode
+uv run lingo login you@example.com
 
 uv run lingo define API
 uv run lingo list
