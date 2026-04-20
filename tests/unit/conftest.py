@@ -16,11 +16,15 @@ def enable_all_features():
         "feature_relationships": settings.feature_relationships,
         "feature_voting": settings.feature_voting,
         "feature_discovery": settings.feature_discovery,
+        "feature_profanity_filter": settings.feature_profanity_filter,
+        "openai_api_key": settings.openai_api_key,
     }
     settings.feature_staleness = True
     settings.feature_relationships = True
     settings.feature_voting = True
     settings.feature_discovery = True
+    settings.feature_profanity_filter = True
+    settings.openai_api_key = ""
     yield
     for k, v in prev.items():
         setattr(settings, k, v)

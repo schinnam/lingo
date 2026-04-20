@@ -11,6 +11,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from lingo.models.term import Term
 from lingo.models.term_history import TermHistory
 from lingo.models.term_relationship import TermRelationship
+from lingo.services.profanity_service import ProfanityError, check_content
+
+__all__ = [
+    "AlreadyOwnedError",
+    "InvalidStatusTransitionError",
+    "ProfanityError",
+    "RelationshipNotFoundError",
+    "TermNotFoundError",
+    "TermService",
+    "VersionConflictError",
+]
 
 
 class TermNotFoundError(Exception):
@@ -47,6 +58,7 @@ class TermService:
         category: str | None = None,
         source: str = "user",
     ) -> Term:
+        await check_content(name=name, definition=definition)
         term = Term(
             name=name,
             definition=definition,

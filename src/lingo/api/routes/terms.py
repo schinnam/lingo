@@ -24,6 +24,7 @@ from lingo.services.audit_service import AuditService
 from lingo.services.term_service import (
     AlreadyOwnedError,
     InvalidStatusTransitionError,
+    ProfanityError,
     RelationshipNotFoundError,
     TermNotFoundError,
     TermService,
@@ -66,13 +67,16 @@ async def create_term(
     current_user: CurrentUser,
 ):
     svc = TermService(session)
-    term = await svc.create(
-        name=body.name,
-        definition=body.definition,
-        full_name=body.full_name,
-        category=body.category,
-        created_by=current_user.id,
-    )
+    try:
+        term = await svc.create(
+            name=body.name,
+            definition=body.definition,
+            full_name=body.full_name,
+            category=body.category,
+            created_by=current_user.id,
+        )
+    except ProfanityError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
     await AuditService(session).log(
         "term.created",
         actor_id=current_user.id,
