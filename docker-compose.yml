@@ -22,6 +22,8 @@ services:
     environment:
       LINGO_DATABASE_URL: postgresql+asyncpg://lingo:lingo@postgres:5432/lingo
       LINGO_DEV_MODE: "true"
+    volumes:
+      - ./src/lingo/static:/app/src/lingo/static
     depends_on:
       postgres:
         condition: service_healthy
