@@ -115,17 +115,22 @@ Go to **OAuth & Permissions → Install to Workspace**. Copy the **Bot User OAut
 
 #### 7. Configure Lingo
 
-Set the environment variables and restart the server:
+Set the environment variables and restart the server. If using Docker, you **must rebuild** the image to apply these changes.
 
 ```bash
 # Bot (required for Slack bot)
-LINGO_SLACK_BOT_TOKEN=xoxb-...
-LINGO_SLACK_APP_TOKEN=xapp-...
-LINGO_SLACK_SIGNING_SECRET=...   # Basic Information → App Credentials
+LINGO_SLACK_BOT_TOKEN=xoxb-...   # OAuth & Permissions -> Bot User OAuth Token
+LINGO_SLACK_APP_TOKEN=xapp-...   # Socket Mode -> App-Level Token (connections:write)
+LINGO_SLACK_SIGNING_SECRET=...   # Basic Information -> App Credentials
 
 # OAuth (required for web UI "Sign in with Slack")
-LINGO_SLACK_CLIENT_ID=...        # Basic Information → App Credentials
-LINGO_SLACK_CLIENT_SECRET=...    # Basic Information → App Credentials
+LINGO_SLACK_CLIENT_ID=...        # Basic Information -> App Credentials
+LINGO_SLACK_CLIENT_SECRET=...    # Basic Information -> App Credentials
+```
+
+If using Docker Compose:
+```bash
+docker compose up --build
 ```
 
 ---
