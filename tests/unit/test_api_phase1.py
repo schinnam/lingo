@@ -82,42 +82,187 @@ async def _create_suggested_term(client, name="SUGG"):
 
 
 # ---------------------------------------------------------------------------
-# Term actions: dispute
+# Term actions: suggest definition change
 # ---------------------------------------------------------------------------
 
 
-class TestDisputeAPI:
-    async def test_dispute_term_returns_200_and_sets_flag(self, client):
-        term = await _create_term(client, "DIS", "Dispute me")
+class TestSuggestionAPI:
+    async def test_suggest_returns_201_with_suggestion(self, client):
+        term = await _create_term(client, "SUG", "Original definition")
         response = await client.post(
-            f"/api/v1/terms/{term['id']}/dispute",
+            f"/api/v1/terms/{term['id']}/suggest",
+            json={"definition": "A better definition"},
             headers={"X-User-Id": client._member_id},
         )
-        assert response.status_code == 200
+        assert response.status_code == 201
         data = response.json()
-        assert data["is_disputed"] is True
+        assert data["definition"] == "A better definition"
+        assert data["status"] == "pending"
+        assert "id" in data
 
-    async def test_dispute_with_comment_sets_flag(self, client):
-        term = await _create_term(client, "DIS3", "Dispute with comment")
+    async def test_suggest_with_comment(self, client):
+        term = await _create_term(client, "SUG2", "Original definition")
         response = await client.post(
-            f"/api/v1/terms/{term['id']}/dispute",
-            json={"comment": "This definition is outdated"},
+            f"/api/v1/terms/{term['id']}/suggest",
+            json={"definition": "Better def", "comment": "More accurate"},
             headers={"X-User-Id": client._member_id},
         )
-        assert response.status_code == 200
-        assert response.json()["is_disputed"] is True
+        assert response.status_code == 201
+        data = response.json()
+        assert data["comment"] == "More accurate"
 
-    async def test_dispute_missing_term_returns_404(self, client):
+    async def test_suggest_missing_definition_returns_422(self, client):
+        term = await _create_term(client, "SUG3", "Original definition")
         response = await client.post(
-            f"/api/v1/terms/{uuid.uuid4()}/dispute",
+            f"/api/v1/terms/{term['id']}/suggest",
+            json={"comment": "No definition provided"},
+            headers={"X-User-Id": client._member_id},
+        )
+        assert response.status_code == 422
+
+    async def test_suggest_missing_term_returns_404(self, client):
+        response = await client.post(
+            f"/api/v1/terms/{uuid.uuid4()}/suggest",
+            json={"definition": "Some definition"},
             headers={"X-User-Id": client._member_id},
         )
         assert response.status_code == 404
 
-    async def test_dispute_without_auth_returns_401(self, client):
-        term = await _create_term(client, "DIS2", "Dispute me unauth")
-        response = await client.post(f"/api/v1/terms/{term['id']}/dispute")
+    async def test_suggest_without_auth_returns_401(self, client):
+        term = await _create_term(client, "SUG4", "Original definition")
+        response = await client.post(
+            f"/api/v1/terms/{term['id']}/suggest",
+            json={"definition": "Unauthorized suggestion"},
+        )
         assert response.status_code == 401
+
+    async def test_owner_can_list_suggestions(self, client):
+        term = await _create_term(client, "SUG5", "Original definition", user_id=client._member_id)
+        await client.post(
+            f"/api/v1/terms/{term['id']}/suggest",
+            json={"definition": "Better def"},
+            headers={"X-User-Id": client._admin_id},
+        )
+        # Claim ownership first
+        await client.post(
+            f"/api/v1/terms/{term['id']}/claim",
+            headers={"X-User-Id": client._member_id},
+        )
+        response = await client.get(
+            f"/api/v1/terms/{term['id']}/suggestions",
+            headers={"X-User-Id": client._member_id},
+        )
+        assert response.status_code == 200
+        assert isinstance(response.json(), list)
+
+    async def test_editor_can_accept_suggestion_as_extra(self, client):
+        term = await _create_term(client, "SUG6", "Original definition")
+        suggest_resp = await client.post(
+            f"/api/v1/terms/{term['id']}/suggest",
+            json={"definition": "Alternative definition"},
+            headers={"X-User-Id": client._member_id},
+        )
+        suggestion_id = suggest_resp.json()["id"]
+        response = await client.post(
+            f"/api/v1/terms/{term['id']}/suggestions/{suggestion_id}/accept",
+            headers={"X-User-Id": client._editor_id},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "Alternative definition" in data["extra_definitions"]
+        assert data["definition"] == "Original definition"
+
+    async def test_editor_can_accept_suggestion_as_replacement(self, client):
+        term = await _create_term(client, "SUG7", "Original definition")
+        suggest_resp = await client.post(
+            f"/api/v1/terms/{term['id']}/suggest",
+            json={"definition": "Replacement definition"},
+            headers={"X-User-Id": client._member_id},
+        )
+        suggestion_id = suggest_resp.json()["id"]
+        response = await client.post(
+            f"/api/v1/terms/{term['id']}/suggestions/{suggestion_id}/accept?replace=true",
+            headers={"X-User-Id": client._editor_id},
+        )
+        assert response.status_code == 200
+        assert response.json()["definition"] == "Replacement definition"
+
+    async def test_editor_can_incorporate_suggestion_into_definition(self, client):
+        term = await _create_term(client, "SUG8A", "Original definition")
+        suggest_resp = await client.post(
+            f"/api/v1/terms/{term['id']}/suggest",
+            json={"definition": "Extra detail to add"},
+            headers={"X-User-Id": client._member_id},
+        )
+        suggestion_id = suggest_resp.json()["id"]
+        merged = "Original definition with extra detail to add"
+        response = await client.post(
+            f"/api/v1/terms/{term['id']}/suggestions/{suggestion_id}/accept",
+            json={"merged_definition": merged},
+            headers={"X-User-Id": client._editor_id},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["definition"] == merged
+        assert data["extra_definitions"] == []
+
+    async def test_incorporate_takes_precedence_over_replace_flag(self, client):
+        term = await _create_term(client, "SUG8B", "Original definition")
+        suggest_resp = await client.post(
+            f"/api/v1/terms/{term['id']}/suggest",
+            json={"definition": "Suggestion text"},
+            headers={"X-User-Id": client._member_id},
+        )
+        suggestion_id = suggest_resp.json()["id"]
+        merged = "Hand-edited merged text"
+        response = await client.post(
+            f"/api/v1/terms/{term['id']}/suggestions/{suggestion_id}/accept?replace=true",
+            json={"merged_definition": merged},
+            headers={"X-User-Id": client._editor_id},
+        )
+        assert response.status_code == 200
+        assert response.json()["definition"] == merged
+
+    async def test_editor_can_reject_suggestion(self, client):
+        term = await _create_term(client, "SUG8", "Original definition")
+        suggest_resp = await client.post(
+            f"/api/v1/terms/{term['id']}/suggest",
+            json={"definition": "Rejected definition"},
+            headers={"X-User-Id": client._member_id},
+        )
+        suggestion_id = suggest_resp.json()["id"]
+        response = await client.post(
+            f"/api/v1/terms/{term['id']}/suggestions/{suggestion_id}/reject",
+            headers={"X-User-Id": client._editor_id},
+        )
+        assert response.status_code == 204
+
+    async def test_max_three_definitions_enforced(self, client):
+        term = await _create_term(client, "SUG9", "Definition 1")
+        # Add 2 more suggestions and accept them as extras (total = 3)
+        for i in range(2):
+            resp = await client.post(
+                f"/api/v1/terms/{term['id']}/suggest",
+                json={"definition": f"Extra definition {i + 2}"},
+                headers={"X-User-Id": client._member_id},
+            )
+            sid = resp.json()["id"]
+            await client.post(
+                f"/api/v1/terms/{term['id']}/suggestions/{sid}/accept",
+                headers={"X-User-Id": client._editor_id},
+            )
+        # A 4th definition should fail
+        resp = await client.post(
+            f"/api/v1/terms/{term['id']}/suggest",
+            json={"definition": "Fourth definition — should be rejected"},
+            headers={"X-User-Id": client._member_id},
+        )
+        sid = resp.json()["id"]
+        response = await client.post(
+            f"/api/v1/terms/{term['id']}/suggestions/{sid}/accept",
+            headers={"X-User-Id": client._editor_id},
+        )
+        assert response.status_code == 409
 
 
 # ---------------------------------------------------------------------------

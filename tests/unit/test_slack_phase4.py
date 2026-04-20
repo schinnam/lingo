@@ -24,9 +24,9 @@ from lingo.slack.handlers import (
     handle_lingo_vote,
 )
 from lingo.slack.notifications import (
-    send_dispute_dm,
     send_promotion_notification,
     send_staleness_dm,
+    send_suggestion_dm,
 )
 
 # ---------------------------------------------------------------------------
@@ -280,7 +280,7 @@ class TestLingoExport:
 # ---------------------------------------------------------------------------
 
 
-class TestDisputeDM:
+class TestSuggestionDM:
     async def test_dm_sent_to_term_owner(self, factory, seeded):
         client = AsyncMock()
         owner = seeded["owner"]
@@ -291,25 +291,27 @@ class TestDisputeDM:
             t.owner_id = owner.id
             await sess.commit()
 
-        await send_dispute_dm(
+        await send_suggestion_dm(
             term_id=official.id,
-            disputer_name="Alice",
-            reason="Definition seems outdated.",
+            suggester_name="Alice",
+            suggested_definition="A better definition for API.",
+            comment="More accurate wording.",
             client=client,
             session_factory=factory,
         )
         client.chat_postMessage.assert_called_once()
         call_kwargs = client.chat_postMessage.call_args[1]
         assert call_kwargs["channel"] == owner.slack_user_id
-        assert "dispute" in call_kwargs["text"].lower() or "API" in call_kwargs["text"]
+        assert "suggested" in call_kwargs["text"].lower() or "API" in call_kwargs["text"]
 
     async def test_no_dm_when_term_has_no_owner(self, factory, seeded):
         client = AsyncMock()
         pending = seeded["pending"]  # owner_id is None
-        await send_dispute_dm(
+        await send_suggestion_dm(
             term_id=pending.id,
-            disputer_name="Bob",
-            reason="Wrong definition.",
+            suggester_name="Bob",
+            suggested_definition="Different definition.",
+            comment="",
             client=client,
             session_factory=factory,
         )

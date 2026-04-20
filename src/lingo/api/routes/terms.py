@@ -7,10 +7,12 @@ from sqlalchemy import func, select
 
 from lingo.api.deps import CurrentUser, EditorUser, SessionDep, require_feature
 from lingo.api.schemas import (
-    DisputeRequest,
+    AcceptSuggestionRequest,
     HistoryResponse,
     RelationshipCreate,
     RelationshipResponse,
+    SuggestionRequest,
+    SuggestionResponse,
     TermCreate,
     TermResponse,
     TermsListResponse,
@@ -26,27 +28,31 @@ from lingo.services.term_service import (
     InvalidStatusTransitionError,
     ProfanityError,
     RelationshipNotFoundError,
+    SuggestionNotFoundError,
     TermNotFoundError,
     TermService,
+    TooManyDefinitionsError,
     VersionConflictError,
 )
 from lingo.services.vote_service import AlreadyVotedError, VoteService
-from lingo.slack.notifications import send_dispute_dm
+from lingo.slack.notifications import send_suggestion_dm
 
 router = APIRouter(prefix="/api/v1/terms", tags=["terms"])
 
 
-def _term_to_response(term, vote_count: int = 0) -> TermResponse:
+async def _term_to_response(
+    term, vote_count: int = 0, extra_definitions: list[str] | None = None
+) -> TermResponse:
     return TermResponse(
         id=term.id,
         name=term.name,
         full_name=term.full_name,
         definition=term.definition,
+        extra_definitions=extra_definitions or [],
         category=term.category,
         status=term.status,
         source=term.source,
         is_stale=term.is_stale,
-        is_disputed=term.is_disputed,
         version=term.version,
         vote_count=vote_count,
         owner_id=term.owner_id,
@@ -58,6 +64,13 @@ async def _count_votes(session, term_id) -> int:
         select(func.count()).select_from(Vote).where(Vote.term_id == term_id)
     )
     return result.scalar() or 0
+
+
+async def _build_term_response(svc: TermService, session, term) -> TermResponse:
+    vc = await _count_votes(session, term.id)
+    extras = await svc.get_extra_definitions(term.id)
+    extra_defs = [e.definition for e in extras]
+    return await _term_to_response(term, vc, extra_defs)
 
 
 @router.post("", status_code=201, response_model=TermResponse)
@@ -84,7 +97,7 @@ async def create_term(
         target_id=term.id,
         payload={"name": term.name},
     )
-    return _term_to_response(term)
+    return await _build_term_response(svc, session, term)
 
 
 @router.get("", response_model=TermsListResponse)
@@ -128,8 +141,7 @@ async def list_terms(
     counts_by_status = {str(k): v for k, v in (await session.execute(status_count_stmt)).all()}
     results = []
     for t in terms:
-        vc = await _count_votes(session, t.id)
-        results.append(_term_to_response(t, vc))
+        results.append(await _build_term_response(svc, session, t))
     return TermsListResponse(
         items=results, total=total, offset=offset, limit=limit, counts_by_status=counts_by_status
     )
@@ -142,8 +154,7 @@ async def get_term(term_id: UUID, session: SessionDep):
         term = await svc.get(term_id)
     except TermNotFoundError:
         raise HTTPException(status_code=404, detail="Term not found")
-    vc = await _count_votes(session, term.id)
-    return _term_to_response(term, vc)
+    return await _build_term_response(svc, session, term)
 
 
 @router.put("/{term_id}", response_model=TermResponse)
@@ -175,8 +186,7 @@ async def update_term(
         target_id=term.id,
         payload={"name": term.name, "change_note": body.change_note},
     )
-    vc = await _count_votes(session, term.id)
-    return _term_to_response(term, vc)
+    return await _build_term_response(svc, session, term)
 
 
 @router.delete("/{term_id}", status_code=204)
@@ -233,20 +243,23 @@ async def vote_term(
     )
 
 
-@router.post("/{term_id}/dispute", response_model=TermResponse)
-async def dispute_term(
+@router.post("/{term_id}/suggest", status_code=201, response_model=SuggestionResponse)
+async def suggest_definition(
     term_id: UUID,
     request: Request,
     background_tasks: BackgroundTasks,
     session: SessionDep,
     current_user: CurrentUser,
-    body: DisputeRequest = Body(default=DisputeRequest()),
+    body: SuggestionRequest = Body(...),
 ):
-    """Flag a term as disputed. Records the dispute and notifies the owner via Slack DM."""
+    """Submit a suggested definition change. Notifies the owner via Slack DM."""
     svc = TermService(session)
     try:
-        term = await svc.dispute(
-            term_id=term_id, by_user=current_user.id, comment=body.comment or ""
+        suggestion = await svc.suggest_definition(
+            term_id=term_id,
+            definition=body.definition,
+            comment=body.comment,
+            by_user=current_user.id,
         )
     except TermNotFoundError:
         raise HTTPException(status_code=404, detail="Term not found")
@@ -256,16 +269,116 @@ async def dispute_term(
         from lingo.db.session import SessionFactory
 
         background_tasks.add_task(
-            send_dispute_dm,
-            term_id=term.id,
-            disputer_name=current_user.display_name or current_user.email,
-            reason=body.comment or "No reason given",
+            send_suggestion_dm,
+            term_id=term_id,
+            suggester_name=current_user.display_name or current_user.email,
+            suggested_definition=body.definition,
+            comment=body.comment or "",
             client=slack_client,
             session_factory=SessionFactory,
         )
 
-    vc = await _count_votes(session, term.id)
-    return _term_to_response(term, vc)
+    return suggestion
+
+
+@router.get("/{term_id}/suggestions", response_model=list[SuggestionResponse])
+async def list_suggestions(
+    term_id: UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+    status: str | None = Query("pending"),
+):
+    """List definition suggestions for a term. Accessible to the term owner or editors/admins."""
+    svc = TermService(session)
+    try:
+        term = await svc.get(term_id)
+    except TermNotFoundError:
+        raise HTTPException(status_code=404, detail="Term not found")
+
+    is_owner = term.owner_id is not None and term.owner_id == current_user.id
+    is_privileged = current_user.role in ("editor", "admin")
+    if not is_owner and not is_privileged:
+        raise HTTPException(
+            status_code=403, detail="Only the term owner or editors can view suggestions"
+        )
+
+    return await svc.get_suggestions(term_id, status=status)
+
+
+@router.post("/{term_id}/suggestions/{suggestion_id}/accept", response_model=TermResponse)
+async def accept_suggestion(
+    term_id: UUID,
+    suggestion_id: UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+    body: AcceptSuggestionRequest = Body(default=AcceptSuggestionRequest()),
+    replace: bool = Query(False),
+):
+    """Accept a suggested definition. Owner or editor only.
+
+    Three modes (checked in order):
+    - body.merged_definition provided → owner's hand-edited text replaces the primary definition
+    - replace=true → suggestion text replaces the primary definition verbatim
+    - default → suggestion added as an extra definition (max 3 total)
+    """
+    svc = TermService(session)
+    try:
+        term = await svc.get(term_id)
+    except TermNotFoundError:
+        raise HTTPException(status_code=404, detail="Term not found")
+
+    is_owner = term.owner_id is not None and term.owner_id == current_user.id
+    is_privileged = current_user.role in ("editor", "admin")
+    if not is_owner and not is_privileged:
+        raise HTTPException(
+            status_code=403, detail="Only the term owner or editors can accept suggestions"
+        )
+
+    try:
+        term = await svc.accept_suggestion(
+            term_id=term_id,
+            suggestion_id=suggestion_id,
+            by_user=current_user.id,
+            replace=replace,
+            merged_definition=body.merged_definition,
+        )
+    except SuggestionNotFoundError:
+        raise HTTPException(status_code=404, detail="Suggestion not found")
+    except TooManyDefinitionsError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+
+    return await _build_term_response(svc, session, term)
+
+
+@router.post("/{term_id}/suggestions/{suggestion_id}/reject", status_code=204)
+async def reject_suggestion(
+    term_id: UUID,
+    suggestion_id: UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+):
+    """Reject a suggested definition. Owner or editor only."""
+    svc = TermService(session)
+    try:
+        term = await svc.get(term_id)
+    except TermNotFoundError:
+        raise HTTPException(status_code=404, detail="Term not found")
+
+    is_owner = term.owner_id is not None and term.owner_id == current_user.id
+    is_privileged = current_user.role in ("editor", "admin")
+    if not is_owner and not is_privileged:
+        raise HTTPException(
+            status_code=403, detail="Only the term owner or editors can reject suggestions"
+        )
+
+    try:
+        await svc.reject_suggestion(
+            term_id=term_id,
+            suggestion_id=suggestion_id,
+            by_user=current_user.id,
+        )
+    except SuggestionNotFoundError:
+        raise HTTPException(status_code=404, detail="Suggestion not found")
 
 
 @router.post(
@@ -288,8 +401,7 @@ async def mark_official(
         target_id=term.id,
         payload={"name": term.name},
     )
-    vc = await _count_votes(session, term.id)
-    return _term_to_response(term, vc)
+    return await _build_term_response(svc, session, term)
 
 
 @router.post(
@@ -307,8 +419,7 @@ async def confirm_term(
         term = await svc.confirm(term_id=term_id, by_user=current_user.id)
     except TermNotFoundError:
         raise HTTPException(status_code=404, detail="Term not found")
-    vc = await _count_votes(session, term.id)
-    return _term_to_response(term, vc)
+    return await _build_term_response(svc, session, term)
 
 
 @router.post("/{term_id}/claim", response_model=TermResponse)
@@ -325,8 +436,7 @@ async def claim_term(
         raise HTTPException(status_code=404, detail="Term not found")
     except AlreadyOwnedError:
         raise HTTPException(status_code=409, detail="Term already has an owner")
-    vc = await _count_votes(session, term.id)
-    return _term_to_response(term, vc)
+    return await _build_term_response(svc, session, term)
 
 
 @router.get("/{term_id}/history", response_model=list[HistoryResponse])
@@ -355,8 +465,7 @@ async def revert_term(
         term = await svc.revert(term_id=term_id, history_id=history_id, by_user=editor.id)
     except TermNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
-    vc = await _count_votes(session, term.id)
-    return _term_to_response(term, vc)
+    return await _build_term_response(svc, session, term)
 
 
 @router.post(
@@ -417,8 +526,7 @@ async def promote_term(
         raise HTTPException(status_code=404, detail="Term not found")
     except InvalidStatusTransitionError as e:
         raise HTTPException(status_code=409, detail=str(e))
-    vc = await _count_votes(session, term.id)
-    return _term_to_response(term, vc)
+    return await _build_term_response(svc, session, term)
 
 
 @router.post("/{term_id}/dismiss", status_code=204, dependencies=[require_feature("voting")])

@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { Term, TermDetail, TermsResponse, VoteResponse, CreateTermPayload } from '../types'
+import type { Term, TermDetail, TermsResponse, VoteResponse, CreateTermPayload, SuggestionResponse } from '../types'
 
 export async function fetchTerms(params: {
   q?: string
@@ -30,6 +30,38 @@ export async function voteTerm(id: string): Promise<VoteResponse> {
   return res.data
 }
 
-export async function disputeTerm(id: string, comment?: string): Promise<void> {
-  await axios.post(`/api/v1/terms/${id}/dispute`, comment ? { comment } : {})
+export async function suggestDefinition(
+  id: string,
+  definition: string,
+  comment?: string
+): Promise<SuggestionResponse> {
+  const res = await axios.post<SuggestionResponse>(`/api/v1/terms/${id}/suggest`, {
+    definition,
+    ...(comment ? { comment } : {}),
+  })
+  return res.data
+}
+
+export async function fetchSuggestions(id: string): Promise<SuggestionResponse[]> {
+  const res = await axios.get<SuggestionResponse[]>(`/api/v1/terms/${id}/suggestions`)
+  return res.data
+}
+
+export async function acceptSuggestion(
+  termId: string,
+  suggestionId: string,
+  replace = false,
+  mergedDefinition?: string
+): Promise<Term> {
+  const body = mergedDefinition ? { merged_definition: mergedDefinition } : {}
+  const res = await axios.post<Term>(
+    `/api/v1/terms/${termId}/suggestions/${suggestionId}/accept`,
+    body,
+    { params: replace && !mergedDefinition ? { replace: true } : {} }
+  )
+  return res.data
+}
+
+export async function rejectSuggestion(termId: string, suggestionId: string): Promise<void> {
+  await axios.post(`/api/v1/terms/${termId}/suggestions/${suggestionId}/reject`)
 }

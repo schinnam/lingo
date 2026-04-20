@@ -4,7 +4,7 @@ import axios from 'axios'
 vi.mock('axios')
 
 // We test the API module functions directly
-import { fetchTerms, fetchTermDetail, addTerm, voteTerm, disputeTerm } from '../api/terms'
+import { fetchTerms, fetchTermDetail, addTerm, voteTerm, suggestDefinition } from '../api/terms'
 
 const mockedAxios = vi.mocked(axios, true)
 
@@ -65,12 +65,28 @@ describe('API: voteTerm', () => {
   })
 })
 
-describe('API: disputeTerm', () => {
+describe('API: suggestDefinition', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('calls POST /api/v1/terms/:id/dispute', async () => {
-    mockedAxios.post = vi.fn().mockResolvedValue({ data: {} })
-    await disputeTerm('abc-123')
-    expect(mockedAxios.post).toHaveBeenCalledWith('/api/v1/terms/abc-123/dispute', {})
+  it('calls POST /api/v1/terms/:id/suggest with definition', async () => {
+    mockedAxios.post = vi.fn().mockResolvedValue({
+      data: { id: 'sug-1', definition: 'New def', status: 'pending' },
+    })
+    const result = await suggestDefinition('abc-123', 'New def')
+    expect(mockedAxios.post).toHaveBeenCalledWith('/api/v1/terms/abc-123/suggest', {
+      definition: 'New def',
+    })
+    expect(result.status).toBe('pending')
+  })
+
+  it('includes comment when provided', async () => {
+    mockedAxios.post = vi.fn().mockResolvedValue({
+      data: { id: 'sug-2', definition: 'New def', status: 'pending' },
+    })
+    await suggestDefinition('abc-123', 'New def', 'Because it is better')
+    expect(mockedAxios.post).toHaveBeenCalledWith('/api/v1/terms/abc-123/suggest', {
+      definition: 'New def',
+      comment: 'Because it is better',
+    })
   })
 })

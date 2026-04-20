@@ -25,8 +25,25 @@ class TermUpdate(BaseModel):
     change_note: str | None = Field(None, max_length=280)
 
 
-class DisputeRequest(BaseModel):
+class SuggestionRequest(BaseModel):
+    definition: str = Field(..., max_length=2000)
     comment: str | None = Field(None, max_length=500)
+
+
+class AcceptSuggestionRequest(BaseModel):
+    merged_definition: str | None = Field(None, max_length=2000)
+
+
+class SuggestionResponse(BaseModel):
+    id: UUID
+    term_id: UUID
+    definition: str
+    comment: str | None
+    suggested_by: UUID
+    status: str
+    created_at: datetime | None = None
+
+    model_config = {"from_attributes": True}
 
 
 class TermResponse(BaseModel):
@@ -34,11 +51,11 @@ class TermResponse(BaseModel):
     name: str
     full_name: str | None
     definition: str
+    extra_definitions: list[str] = []
     category: str | None
     status: str
     source: str
     is_stale: bool
-    is_disputed: bool = False
     version: int
     vote_count: int = 0
     owner_id: UUID | None = None

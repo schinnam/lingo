@@ -11,15 +11,16 @@ from lingo.models.term import Term
 from lingo.models.user import User
 
 
-async def send_dispute_dm(
+async def send_suggestion_dm(
     *,
     term_id: UUID,
-    disputer_name: str,
-    reason: str,
+    suggester_name: str,
+    suggested_definition: str,
+    comment: str,
     client,
     session_factory,
 ) -> None:
-    """DM the term owner when someone disputes a definition."""
+    """DM the term owner when someone suggests a new definition."""
     async with session_factory() as session:
         term = await session.get(Term, term_id)
         if term is None or term.owner_id is None:
@@ -30,10 +31,12 @@ async def send_dispute_dm(
             return
 
     text = (
-        f":warning: *{disputer_name}* has disputed the definition of *{term.name}*.\n"
-        f">_{reason}_\n"
-        f"Please review and update the definition if needed."
+        f":bulb: *{suggester_name}* has suggested a new definition for *{term.name}*.\n"
+        f">_{suggested_definition}_\n"
     )
+    if comment:
+        text += f"Comment: _{comment}_\n"
+    text += "Please review and accept or reject the suggestion."
     await client.chat_postMessage(channel=owner.slack_user_id, text=text)
 
 

@@ -21,7 +21,6 @@ class Term(Base):
     owner_id: Mapped[object | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     owned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     is_stale: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    is_disputed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     last_confirmed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
@@ -37,8 +36,6 @@ class Term(Base):
     def __init__(self, **kwargs):
         if "is_stale" not in kwargs:
             kwargs["is_stale"] = False
-        if "is_disputed" not in kwargs:
-            kwargs["is_disputed"] = False
         if "version" not in kwargs:
             kwargs["version"] = 1
         super().__init__(**kwargs)

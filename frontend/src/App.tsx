@@ -6,7 +6,16 @@ import { TermRow } from './components/TermRow'
 import { TermDetail } from './components/TermDetail'
 import { AddTermModal } from './components/AddTermModal'
 import { DevModeBanner } from './components/DevModeBanner'
-import { useTerms, useTermDetail, useAddTerm, useVoteTerm, useDisputeTerm } from './hooks/useTerms'
+import {
+  useTerms,
+  useTermDetail,
+  useAddTerm,
+  useVoteTerm,
+  useSuggestDefinition,
+  useSuggestions,
+  useAcceptSuggestion,
+  useRejectSuggestion,
+} from './hooks/useTerms'
 import { useFeatures } from './hooks/useFeatures'
 import { fetchCurrentUser } from './api/auth'
 import type { Term, TermStatus } from './types'
@@ -31,7 +40,10 @@ function AppInner() {
   const { data: detail } = useTermDetail(selectedId)
   const addTerm = useAddTerm()
   const voteTerm = useVoteTerm()
-  const disputeTerm = useDisputeTerm()
+  const suggestDefinition = useSuggestDefinition()
+  const { data: suggestions } = useSuggestions(selectedId)
+  const acceptSuggestion = useAcceptSuggestion()
+  const rejectSuggestion = useRejectSuggestion()
 
   const terms = data?.items ?? []
 
@@ -153,7 +165,16 @@ function AppInner() {
               features={features}
               onClose={() => setSelectedId(null)}
               onVote={(id) => voteTerm.mutate(id)}
-              onDispute={(id, comment) => disputeTerm.mutate({ id, comment })}
+              onSuggest={(id, definition, comment) =>
+                suggestDefinition.mutate({ id, definition, comment })
+              }
+              suggestions={suggestions}
+              onAcceptSuggestion={(termId, suggestionId, replace, mergedDefinition) =>
+                acceptSuggestion.mutate({ termId, suggestionId, replace, mergedDefinition })
+              }
+              onRejectSuggestion={(termId, suggestionId) =>
+                rejectSuggestion.mutate({ termId, suggestionId })
+              }
             />
           </aside>
         )}
