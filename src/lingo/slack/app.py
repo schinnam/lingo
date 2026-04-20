@@ -1,4 +1,4 @@
-"""Slack AsyncApp (Socket Mode) for Lingo.
+"""Slack AsyncApp (HTTP Events) for Lingo.
 
 Commands:
   /lingo define <term>
@@ -12,7 +12,7 @@ Interactive actions:
   staleness_update_<term_id>
 
 Start with:
-  LINGO_SLACK_BOT_TOKEN=... LINGO_SLACK_APP_TOKEN=... LINGO_SLACK_SIGNING_SECRET=... \\
+  LINGO_SLACK_BOT_TOKEN=... LINGO_SLACK_SIGNING_SECRET=... \\
   uv run python -m lingo.slack.app
 """
 
@@ -22,7 +22,6 @@ import re
 from datetime import UTC, datetime
 from uuid import UUID
 
-from slack_bolt.adapter.socket_mode.async_handler import AsyncSocketModeHandler
 from slack_bolt.async_app import AsyncApp
 
 from lingo.config import settings
@@ -39,6 +38,7 @@ from lingo.slack.handlers import (
 slack_app = AsyncApp(
     token=settings.slack_bot_token,
     signing_secret=settings.slack_signing_secret or None,
+    request_verification_enabled=not settings.dev_mode,
 )
 
 
@@ -183,14 +183,3 @@ async def staleness_update(ack, action, body, client):
         channel=slack_user_id,
         text=(f"To update *{term_name}*, use:\n`/lingo add {term_name} -- <new definition>`"),
     )
-
-
-async def start():
-    handler = AsyncSocketModeHandler(slack_app, settings.slack_app_token)
-    await handler.start_async()
-
-
-if __name__ == "__main__":
-    import asyncio
-
-    asyncio.run(start())

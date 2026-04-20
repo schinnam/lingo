@@ -34,8 +34,8 @@ Lingo is a single Python service (FastAPI + asyncpg + Postgres) with three clien
 └─────────────────────────────────────────────────────────┘
 
        ▲                    ▲                    ▲
-  Slack Bot             CLI (httpx)         Web Browser
-  (Socket Mode)         LINGO_APP_URL       React SPA
+  Slack Cloud           CLI (httpx)         Web Browser
+  (Events API)          LINGO_APP_URL       React SPA
 ```
 
 ---
@@ -184,8 +184,9 @@ State is managed with TanStack Query (`useTerms`, `useTermDetail`, `useAddTerm`,
 ---
 
 ## Slack bot
+### Slack
+`slack-bolt` `AsyncApp` receiving events via HTTPS. No persistent WebSocket connection required — Slack POSTs events to `{LINGO_APP_URL}/slack/events`. Verified via `LINGO_SLACK_SIGNING_SECRET`.
 
-`slack-bolt` `AsyncApp` running in Socket Mode. No public URL or webhook required — the bot connects outbound to Slack's API.
 
 Slash command handlers: `define`, `add`, `vote`, `export`.
 Notification helpers: `send_dispute_dm`, `send_promotion_notification`, `send_staleness_dm`.

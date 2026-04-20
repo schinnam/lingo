@@ -96,9 +96,8 @@ All settings use the `LINGO_` prefix. Set them via environment variables or a `.
 | `LINGO_SECRET_KEY` | `change-me-in-production` | JWT signing key |
 | `LINGO_SLACK_CLIENT_ID` | `""` | Slack app Client ID (required for web UI login) |
 | `LINGO_SLACK_CLIENT_SECRET` | `""` | Slack app Client Secret |
-| `LINGO_SLACK_BOT_TOKEN` | `""` | Slack bot token (Socket Mode) |
-| `LINGO_SLACK_APP_TOKEN` | `""` | Slack app-level token |
-| `LINGO_SLACK_SIGNING_SECRET` | `""` | Slack signing secret |
+| `LINGO_SLACK_BOT_TOKEN` | `""` | Slack bot token (starts with `xoxb-`) |
+| `LINGO_SLACK_SIGNING_SECRET` | `""` | Slack app signing secret (used for event verification) |
 | `LINGO_MCP_BEARER_TOKEN` | `""` | Bearer token for MCP endpoint |
 | `LINGO_COMMUNITY_THRESHOLD` | `3` | Votes needed to promote `pending` → `community` |
 | `LINGO_OFFICIAL_THRESHOLD` | `10` | Votes needed for editor to mark `community` → `official` |
@@ -161,7 +160,10 @@ uv run lingo export --status community --output glossary.md
 
 ## Slack bot
 
-Set `LINGO_SLACK_BOT_TOKEN`, `LINGO_SLACK_APP_TOKEN`, and `LINGO_SLACK_SIGNING_SECRET`, then start the server. The bot uses Socket Mode — no public URL needed.
+Set `LINGO_SLACK_BOT_TOKEN`, `LINGO_SLACK_SIGNING_SECRET`, and `LINGO_APP_URL`. 
+
+Configure your Slack App with the **Request URL**: 
+`{LINGO_APP_URL}/slack/events`
 
 ```
 /lingo define API

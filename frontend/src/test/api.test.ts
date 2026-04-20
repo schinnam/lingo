@@ -71,6 +71,6 @@ describe('API: disputeTerm', () => {
   it('calls POST /api/v1/terms/:id/dispute', async () => {
     mockedAxios.post = vi.fn().mockResolvedValue({ data: {} })
     await disputeTerm('abc-123')
-    expect(mockedAxios.post).toHaveBeenCalledWith('/api/v1/terms/abc-123/dispute')
+    expect(mockedAxios.post).toHaveBeenCalledWith('/api/v1/terms/abc-123/dispute', {})
   })
 })

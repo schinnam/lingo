@@ -1,6 +1,5 @@
 """FastAPI application entry point."""
 
-import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -10,7 +9,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
-from lingo.api.routes import admin, auth, export, features, terms, tokens, users
+from lingo.api.routes import admin, auth, export, features, slack, terms, tokens, users
 from lingo.config import settings
 from lingo.db.session import SessionFactory
 from lingo.mcp.app import mcp
@@ -32,21 +31,15 @@ async def lifespan(app: FastAPI):
         slack_client = AsyncWebClient(token=settings.slack_bot_token)
     app.state.slack_client = slack_client
 
-    # Start Slack bot (Socket Mode) if tokens are configured
-    slack_handler = None
-    if settings.slack_app_token and settings.slack_bot_token:
-        print("INFO:     Starting Slack bot (Socket Mode)...")
-        from slack_bolt.adapter.socket_mode.async_handler import AsyncSocketModeHandler
-
-        from lingo.slack.app import slack_app
-
-        slack_handler = AsyncSocketModeHandler(slack_app, settings.slack_app_token)
-        asyncio.create_task(slack_handler.start_async())
+    # Log status for Slack bot (Events API)
+    if settings.slack_signing_secret and settings.slack_bot_token:
+        print("INFO:     Slack bot (Events API) enabled.")
     else:
         print(
             """
-            WARNING:  Slack bot tokens (LINGO_SLACK_BOT_TOKEN or LINGO_SLACK_APP_TOKEN) not set. 
-            Bot will not start.
+            WARNING:  
+            Slack bot tokens (LINGO_SLACK_BOT_TOKEN or LINGO_SLACK_SIGNING_SECRET) not set. 
+            Bot events will fail verification.
             """
         )
 
@@ -60,8 +53,6 @@ async def lifespan(app: FastAPI):
         yield
 
     scheduler.shutdown(wait=False)
-    if slack_handler:
-        await slack_handler.close_async()
 
 
 app = FastAPI(
@@ -99,6 +90,7 @@ app.include_router(users.router)
 app.include_router(tokens.router)
 app.include_router(admin.router)
 app.include_router(features.router)
+app.include_router(slack.router)
 
 # MCP endpoint — bearer token auth required
 app.mount("/mcp", MCPBearerAuthMiddleware(_mcp_asgi))
