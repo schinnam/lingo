@@ -30,6 +30,10 @@ class SuggestionRequest(BaseModel):
     comment: str | None = Field(None, max_length=500)
 
 
+class AcceptSuggestionRequest(BaseModel):
+    merged_definition: str | None = Field(None, max_length=2000)
+
+
 class SuggestionResponse(BaseModel):
     id: UUID
     term_id: UUID

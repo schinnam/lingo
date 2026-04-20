@@ -10,7 +10,12 @@ interface TermDetailProps {
   onVote: (id: string) => void
   onSuggest: (id: string, definition: string, comment?: string) => void
   suggestions?: SuggestionResponse[]
-  onAcceptSuggestion?: (termId: string, suggestionId: string, replace: boolean) => void
+  onAcceptSuggestion?: (
+    termId: string,
+    suggestionId: string,
+    replace: boolean,
+    mergedDefinition?: string
+  ) => void
   onRejectSuggestion?: (termId: string, suggestionId: string) => void
 }
 
@@ -28,12 +33,32 @@ export function TermDetail({
   const [suggestedDefinition, setSuggestedDefinition] = useState('')
   const [comment, setComment] = useState('')
 
+  // Tracks which suggestion is in "edit & incorporate" mode
+  const [incorporateId, setIncorporateId] = useState<string | null>(null)
+  const [mergedDefinition, setMergedDefinition] = useState('')
+
   function handleSuggestSubmit() {
     if (!suggestedDefinition.trim()) return
     onSuggest(term.id, suggestedDefinition.trim(), comment.trim() || undefined)
     setSuggestOpen(false)
     setSuggestedDefinition('')
     setComment('')
+  }
+
+  function openIncorporate(suggestionId: string) {
+    setIncorporateId(suggestionId)
+    setMergedDefinition(term.definition)
+  }
+
+  function cancelIncorporate() {
+    setIncorporateId(null)
+    setMergedDefinition('')
+  }
+
+  function handleIncorporateSubmit(suggestionId: string) {
+    if (!mergedDefinition.trim()) return
+    onAcceptSuggestion?.(term.id, suggestionId, false, mergedDefinition.trim())
+    cancelIncorporate()
   }
 
   const pendingSuggestions = suggestions?.filter((s) => s.status === 'pending') ?? []
@@ -101,41 +126,85 @@ export function TermDetail({
       {pendingSuggestions.length > 0 && (
         <div className="mb-4 border border-blue-100 rounded-md p-3 bg-blue-50">
           <p className="text-xs font-medium text-blue-700 uppercase mb-2">Pending Suggestions</p>
-          <ul className="space-y-3">
+          <ul className="space-y-4">
             {pendingSuggestions.map((s) => (
               <li key={s.id} className="text-sm">
                 <p className="text-gray-800 mb-1">{s.definition}</p>
                 {s.comment && <p className="text-xs text-gray-500 italic mb-2">{s.comment}</p>}
-                {(onAcceptSuggestion || onRejectSuggestion) && (
-                  <div className="flex gap-2">
-                    {onAcceptSuggestion && (
-                      <>
-                        <button
-                          onClick={() => onAcceptSuggestion(term.id, s.id, false)}
-                          className="text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700"
-                          aria-label="Add as extra definition"
-                        >
-                          + Add definition
-                        </button>
-                        <button
-                          onClick={() => onAcceptSuggestion(term.id, s.id, true)}
-                          className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
-                          aria-label="Replace primary definition"
-                        >
-                          Replace primary
-                        </button>
-                      </>
-                    )}
-                    {onRejectSuggestion && (
+
+                {incorporateId === s.id ? (
+                  <div className="mt-2 flex flex-col gap-2">
+                    <p className="text-xs text-gray-500 font-medium">
+                      Suggested: <span className="italic">{s.definition}</span>
+                    </p>
+                    <label htmlFor={`incorporate-${s.id}`} className="text-xs text-gray-600 font-medium">
+                      Edit to incorporate:
+                    </label>
+                    <textarea
+                      id={`incorporate-${s.id}`}
+                      value={mergedDefinition}
+                      onChange={(e) => setMergedDefinition(e.target.value)}
+                      rows={4}
+                      maxLength={2000}
+                      className="w-full text-sm border border-gray-300 rounded-md p-2 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    />
+                    <div className="flex gap-2">
                       <button
-                        onClick={() => onRejectSuggestion(term.id, s.id)}
-                        className="text-xs px-2 py-1 border border-gray-300 text-gray-600 rounded hover:bg-gray-100"
-                        aria-label="Reject suggestion"
+                        onClick={() => handleIncorporateSubmit(s.id)}
+                        disabled={!mergedDefinition.trim()}
+                        aria-label="Save incorporated definition"
+                        className="flex-1 px-3 py-1.5 bg-green-600 text-white text-xs rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        Reject
+                        Save & Accept
                       </button>
-                    )}
+                      <button
+                        onClick={cancelIncorporate}
+                        aria-label="Cancel incorporate"
+                        className="flex-1 px-3 py-1.5 border border-gray-300 text-gray-600 text-xs rounded-md hover:bg-gray-50"
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   </div>
+                ) : (
+                  (onAcceptSuggestion || onRejectSuggestion) && (
+                    <div className="flex flex-wrap gap-2">
+                      {onAcceptSuggestion && (
+                        <>
+                          <button
+                            onClick={() => onAcceptSuggestion(term.id, s.id, false)}
+                            className="text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                            aria-label="Add as extra definition"
+                          >
+                            + Add definition
+                          </button>
+                          <button
+                            onClick={() => onAcceptSuggestion(term.id, s.id, true)}
+                            className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                            aria-label="Replace primary definition"
+                          >
+                            Replace primary
+                          </button>
+                          <button
+                            onClick={() => openIncorporate(s.id)}
+                            className="text-xs px-2 py-1 bg-purple-600 text-white rounded hover:bg-purple-700"
+                            aria-label="Edit and incorporate suggestion"
+                          >
+                            Edit & incorporate
+                          </button>
+                        </>
+                      )}
+                      {onRejectSuggestion && (
+                        <button
+                          onClick={() => onRejectSuggestion(term.id, s.id)}
+                          className="text-xs px-2 py-1 border border-gray-300 text-gray-600 rounded hover:bg-gray-100"
+                          aria-label="Reject suggestion"
+                        >
+                          Reject
+                        </button>
+                      )}
+                    </div>
+                  )
                 )}
               </li>
             ))}

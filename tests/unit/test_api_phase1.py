@@ -187,6 +187,42 @@ class TestSuggestionAPI:
         assert response.status_code == 200
         assert response.json()["definition"] == "Replacement definition"
 
+    async def test_editor_can_incorporate_suggestion_into_definition(self, client):
+        term = await _create_term(client, "SUG8A", "Original definition")
+        suggest_resp = await client.post(
+            f"/api/v1/terms/{term['id']}/suggest",
+            json={"definition": "Extra detail to add"},
+            headers={"X-User-Id": client._member_id},
+        )
+        suggestion_id = suggest_resp.json()["id"]
+        merged = "Original definition with extra detail to add"
+        response = await client.post(
+            f"/api/v1/terms/{term['id']}/suggestions/{suggestion_id}/accept",
+            json={"merged_definition": merged},
+            headers={"X-User-Id": client._editor_id},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["definition"] == merged
+        assert data["extra_definitions"] == []
+
+    async def test_incorporate_takes_precedence_over_replace_flag(self, client):
+        term = await _create_term(client, "SUG8B", "Original definition")
+        suggest_resp = await client.post(
+            f"/api/v1/terms/{term['id']}/suggest",
+            json={"definition": "Suggestion text"},
+            headers={"X-User-Id": client._member_id},
+        )
+        suggestion_id = suggest_resp.json()["id"]
+        merged = "Hand-edited merged text"
+        response = await client.post(
+            f"/api/v1/terms/{term['id']}/suggestions/{suggestion_id}/accept?replace=true",
+            json={"merged_definition": merged},
+            headers={"X-User-Id": client._editor_id},
+        )
+        assert response.status_code == 200
+        assert response.json()["definition"] == merged
+
     async def test_editor_can_reject_suggestion(self, client):
         term = await _create_term(client, "SUG8", "Original definition")
         suggest_resp = await client.post(

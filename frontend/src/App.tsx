@@ -169,8 +169,8 @@ function AppInner() {
                 suggestDefinition.mutate({ id, definition, comment })
               }
               suggestions={suggestions}
-              onAcceptSuggestion={(termId, suggestionId, replace) =>
-                acceptSuggestion.mutate({ termId, suggestionId, replace })
+              onAcceptSuggestion={(termId, suggestionId, replace, mergedDefinition) =>
+                acceptSuggestion.mutate({ termId, suggestionId, replace, mergedDefinition })
               }
               onRejectSuggestion={(termId, suggestionId) =>
                 rejectSuggestion.mutate({ termId, suggestionId })

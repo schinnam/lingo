@@ -143,4 +143,89 @@ describe('TermDetail', () => {
     render(<TermDetail term={mockTerm} features={allFeatures} onClose={() => {}} onVote={() => {}} onSuggest={() => {}} />)
     expect(screen.getByRole('dialog')).toBeInTheDocument()
   })
+
+  describe('incorporate flow', () => {
+    const pendingSuggestion = {
+      id: 'sug-1',
+      term_id: 'abc-123',
+      definition: 'Extra detail to add',
+      comment: null,
+      suggested_by: 'user-1',
+      status: 'pending' as const,
+      created_at: null,
+    }
+
+    it('shows Edit & incorporate button for pending suggestions', () => {
+      const onAccept = vi.fn()
+      render(
+        <TermDetail
+          term={mockTerm}
+          features={allFeatures}
+          onClose={() => {}}
+          onVote={() => {}}
+          onSuggest={() => {}}
+          suggestions={[pendingSuggestion]}
+          onAcceptSuggestion={onAccept}
+        />
+      )
+      expect(screen.getByRole('button', { name: /edit and incorporate suggestion/i })).toBeInTheDocument()
+    })
+
+    it('opens inline editor pre-populated with current definition on Edit & incorporate click', () => {
+      render(
+        <TermDetail
+          term={mockTerm}
+          features={allFeatures}
+          onClose={() => {}}
+          onVote={() => {}}
+          onSuggest={() => {}}
+          suggestions={[pendingSuggestion]}
+          onAcceptSuggestion={() => {}}
+        />
+      )
+      fireEvent.click(screen.getByRole('button', { name: /edit and incorporate suggestion/i }))
+      const editor = screen.getByRole('textbox', { name: /edit to incorporate/i })
+      expect(editor).toBeInTheDocument()
+      expect((editor as HTMLTextAreaElement).value).toBe(mockTerm.definition)
+    })
+
+    it('calls onAcceptSuggestion with merged_definition on Save & Accept', () => {
+      const onAccept = vi.fn()
+      render(
+        <TermDetail
+          term={mockTerm}
+          features={allFeatures}
+          onClose={() => {}}
+          onVote={() => {}}
+          onSuggest={() => {}}
+          suggestions={[pendingSuggestion]}
+          onAcceptSuggestion={onAccept}
+        />
+      )
+      fireEvent.click(screen.getByRole('button', { name: /edit and incorporate suggestion/i }))
+      const editor = screen.getByRole('textbox', { name: /edit to incorporate/i })
+      fireEvent.change(editor, { target: { value: 'Original plus extra detail' } })
+      fireEvent.click(screen.getByRole('button', { name: /save incorporated definition/i }))
+      expect(onAccept).toHaveBeenCalledWith('abc-123', 'sug-1', false, 'Original plus extra detail')
+    })
+
+    it('closes editor on Cancel without calling onAcceptSuggestion', () => {
+      const onAccept = vi.fn()
+      render(
+        <TermDetail
+          term={mockTerm}
+          features={allFeatures}
+          onClose={() => {}}
+          onVote={() => {}}
+          onSuggest={() => {}}
+          suggestions={[pendingSuggestion]}
+          onAcceptSuggestion={onAccept}
+        />
+      )
+      fireEvent.click(screen.getByRole('button', { name: /edit and incorporate suggestion/i }))
+      fireEvent.click(screen.getByRole('button', { name: /cancel incorporate/i }))
+      expect(onAccept).not.toHaveBeenCalled()
+      expect(screen.queryByRole('textbox', { name: /edit to incorporate/i })).not.toBeInTheDocument()
+    })
+  })
 })

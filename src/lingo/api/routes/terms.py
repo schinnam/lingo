@@ -7,6 +7,7 @@ from sqlalchemy import func, select
 
 from lingo.api.deps import CurrentUser, EditorUser, SessionDep, require_feature
 from lingo.api.schemas import (
+    AcceptSuggestionRequest,
     HistoryResponse,
     RelationshipCreate,
     RelationshipResponse,
@@ -39,7 +40,9 @@ from lingo.slack.notifications import send_suggestion_dm
 router = APIRouter(prefix="/api/v1/terms", tags=["terms"])
 
 
-async def _term_to_response(term, vote_count: int = 0, extra_definitions: list[str] | None = None) -> TermResponse:
+async def _term_to_response(
+    term, vote_count: int = 0, extra_definitions: list[str] | None = None
+) -> TermResponse:
     return TermResponse(
         id=term.id,
         name=term.name,
@@ -295,7 +298,9 @@ async def list_suggestions(
     is_owner = term.owner_id is not None and term.owner_id == current_user.id
     is_privileged = current_user.role in ("editor", "admin")
     if not is_owner and not is_privileged:
-        raise HTTPException(status_code=403, detail="Only the term owner or editors can view suggestions")
+        raise HTTPException(
+            status_code=403, detail="Only the term owner or editors can view suggestions"
+        )
 
     return await svc.get_suggestions(term_id, status=status)
 
@@ -306,12 +311,15 @@ async def accept_suggestion(
     suggestion_id: UUID,
     session: SessionDep,
     current_user: CurrentUser,
+    body: AcceptSuggestionRequest = Body(default=AcceptSuggestionRequest()),
     replace: bool = Query(False),
 ):
     """Accept a suggested definition. Owner or editor only.
 
-    If replace=true, the primary definition is replaced.
-    Otherwise the suggestion is added as an extra definition (max 3 total).
+    Three modes (checked in order):
+    - body.merged_definition provided → owner's hand-edited text replaces the primary definition
+    - replace=true → suggestion text replaces the primary definition verbatim
+    - default → suggestion added as an extra definition (max 3 total)
     """
     svc = TermService(session)
     try:
@@ -322,7 +330,9 @@ async def accept_suggestion(
     is_owner = term.owner_id is not None and term.owner_id == current_user.id
     is_privileged = current_user.role in ("editor", "admin")
     if not is_owner and not is_privileged:
-        raise HTTPException(status_code=403, detail="Only the term owner or editors can accept suggestions")
+        raise HTTPException(
+            status_code=403, detail="Only the term owner or editors can accept suggestions"
+        )
 
     try:
         term = await svc.accept_suggestion(
@@ -330,6 +340,7 @@ async def accept_suggestion(
             suggestion_id=suggestion_id,
             by_user=current_user.id,
             replace=replace,
+            merged_definition=body.merged_definition,
         )
     except SuggestionNotFoundError:
         raise HTTPException(status_code=404, detail="Suggestion not found")
@@ -356,7 +367,9 @@ async def reject_suggestion(
     is_owner = term.owner_id is not None and term.owner_id == current_user.id
     is_privileged = current_user.role in ("editor", "admin")
     if not is_owner and not is_privileged:
-        raise HTTPException(status_code=403, detail="Only the term owner or editors can reject suggestions")
+        raise HTTPException(
+            status_code=403, detail="Only the term owner or editors can reject suggestions"
+        )
 
     try:
         await svc.reject_suggestion(

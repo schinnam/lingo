@@ -298,6 +298,7 @@ class TermService:
         suggestion_id: UUID,
         by_user: UUID,
         replace: bool = False,
+        merged_definition: str | None = None,
     ) -> Term:
         term = await self._session.get(Term, term_id)
         if term is None:
@@ -306,7 +307,8 @@ class TermService:
         if suggestion is None or suggestion.term_id != term_id:
             raise SuggestionNotFoundError(f"Suggestion {suggestion_id} not found")
 
-        if replace:
+        if merged_definition is not None:
+            # Owner manually incorporated the suggestion into a hand-edited definition.
             snapshot = TermHistory(
                 term_id=term.id,
                 definition=term.definition,
@@ -315,7 +317,21 @@ class TermService:
                 owner_id=term.owner_id,
                 status=term.status,
                 changed_by=by_user,
-                change_note=f"Accepted suggestion: replaced definition",
+                change_note="Incorporated suggestion into definition",
+            )
+            self._session.add(snapshot)
+            term.definition = merged_definition
+            term.version += 1
+        elif replace:
+            snapshot = TermHistory(
+                term_id=term.id,
+                definition=term.definition,
+                full_name=term.full_name,
+                category=term.category,
+                owner_id=term.owner_id,
+                status=term.status,
+                changed_by=by_user,
+                change_note="Accepted suggestion: replaced definition",
             )
             self._session.add(snapshot)
             term.definition = suggestion.definition
@@ -341,9 +357,7 @@ class TermService:
         await self._session.refresh(term)
         return term
 
-    async def reject_suggestion(
-        self, term_id: UUID, suggestion_id: UUID, by_user: UUID
-    ) -> None:
+    async def reject_suggestion(self, term_id: UUID, suggestion_id: UUID, by_user: UUID) -> None:
         term = await self._session.get(Term, term_id)
         if term is None:
             raise TermNotFoundError(f"Term {term_id} not found")

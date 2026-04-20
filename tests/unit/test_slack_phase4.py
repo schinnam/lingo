@@ -24,9 +24,9 @@ from lingo.slack.handlers import (
     handle_lingo_vote,
 )
 from lingo.slack.notifications import (
-    send_suggestion_dm,
     send_promotion_notification,
     send_staleness_dm,
+    send_suggestion_dm,
 )
 
 # ---------------------------------------------------------------------------

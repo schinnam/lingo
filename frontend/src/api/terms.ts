@@ -50,12 +50,14 @@ export async function fetchSuggestions(id: string): Promise<SuggestionResponse[]
 export async function acceptSuggestion(
   termId: string,
   suggestionId: string,
-  replace = false
+  replace = false,
+  mergedDefinition?: string
 ): Promise<Term> {
+  const body = mergedDefinition ? { merged_definition: mergedDefinition } : {}
   const res = await axios.post<Term>(
     `/api/v1/terms/${termId}/suggestions/${suggestionId}/accept`,
-    {},
-    { params: replace ? { replace: true } : {} }
+    body,
+    { params: replace && !mergedDefinition ? { replace: true } : {} }
   )
   return res.data
 }

@@ -76,11 +76,13 @@ export function useAcceptSuggestion() {
       termId,
       suggestionId,
       replace,
+      mergedDefinition,
     }: {
       termId: string
       suggestionId: string
       replace?: boolean
-    }) => acceptSuggestion(termId, suggestionId, replace),
+      mergedDefinition?: string
+    }) => acceptSuggestion(termId, suggestionId, replace, mergedDefinition),
     onSuccess: (_data, { termId }) => {
       qc.invalidateQueries({ queryKey: ['term', termId] })
       qc.invalidateQueries({ queryKey: ['terms'] })
