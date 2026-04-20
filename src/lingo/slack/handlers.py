@@ -16,7 +16,7 @@ from sqlalchemy import select
 from lingo.models.term import Term
 from lingo.models.token import Token
 from lingo.models.user import User
-from lingo.services.term_service import TermService
+from lingo.services.term_service import ProfanityError, TermService
 from lingo.services.vote_service import AlreadyVotedError, VoteService
 
 
@@ -88,12 +88,19 @@ async def handle_lingo_add(
             return
 
         svc = TermService(session)
-        term = await svc.create(
-            name=term_name,
-            definition=definition,
-            created_by=user.id,
-            source="slack",
-        )
+        try:
+            term = await svc.create(
+                name=term_name,
+                definition=definition,
+                created_by=user.id,
+                source="slack",
+            )
+        except ProfanityError:
+            await say(
+                "Sorry, your submission contains content that is not allowed. "
+                "Please revise the term name or definition and try again."
+            )
+            return
 
     await say(
         f"Added *{term.name}* to the glossary. "

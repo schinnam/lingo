@@ -31,8 +31,12 @@ class Settings(BaseSettings):
     # App
     app_url: str = "http://localhost:8000"
 
+    # OpenAI (optional — enables enhanced profanity checking via Moderation API)
+    openai_api_key: str = ""
+
     # Feature flags — set via env vars, e.g. LINGO_FEATURE_VOTING=false
     # Defaults to a simple experience suitable for small teams.
+    feature_profanity_filter: bool = True  # Block abusive/profane term submissions
     feature_discovery: bool = False  # Slack auto-discovery job
     feature_relationships: bool = False  # Term relationship linking
     feature_voting: bool = True  # Voting & status pipeline
