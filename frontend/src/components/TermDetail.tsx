@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { TermDetail as TermDetailType } from '../types'
+import type { TermDetail as TermDetailType, SuggestionResponse } from '../types'
 import type { Features } from '../api/features'
 import { StatusBadge } from './StatusBadge'
 
@@ -8,18 +8,35 @@ interface TermDetailProps {
   features: Features
   onClose: () => void
   onVote: (id: string) => void
-  onDispute: (id: string, comment?: string) => void
+  onSuggest: (id: string, definition: string, comment?: string) => void
+  suggestions?: SuggestionResponse[]
+  onAcceptSuggestion?: (termId: string, suggestionId: string, replace: boolean) => void
+  onRejectSuggestion?: (termId: string, suggestionId: string) => void
 }
 
-export function TermDetail({ term, features, onClose, onVote, onDispute }: TermDetailProps) {
-  const [disputeOpen, setDisputeOpen] = useState(false)
+export function TermDetail({
+  term,
+  features,
+  onClose,
+  onVote,
+  onSuggest,
+  suggestions,
+  onAcceptSuggestion,
+  onRejectSuggestion,
+}: TermDetailProps) {
+  const [suggestOpen, setSuggestOpen] = useState(false)
+  const [suggestedDefinition, setSuggestedDefinition] = useState('')
   const [comment, setComment] = useState('')
 
-  function handleDisputeSubmit() {
-    onDispute(term.id, comment.trim() || undefined)
-    setDisputeOpen(false)
+  function handleSuggestSubmit() {
+    if (!suggestedDefinition.trim()) return
+    onSuggest(term.id, suggestedDefinition.trim(), comment.trim() || undefined)
+    setSuggestOpen(false)
+    setSuggestedDefinition('')
     setComment('')
   }
+
+  const pendingSuggestions = suggestions?.filter((s) => s.status === 'pending') ?? []
 
   return (
     <div
@@ -52,7 +69,16 @@ export function TermDetail({ term, features, onClose, onVote, onDispute }: TermD
         )}
       </div>
 
-      <p className="text-sm text-gray-800 mb-4">{term.definition}</p>
+      <div className="mb-4">
+        <p className="text-sm text-gray-800">{term.definition}</p>
+        {term.extra_definitions.length > 0 && (
+          <ol className="mt-2 space-y-1 list-decimal list-inside">
+            {term.extra_definitions.map((def, i) => (
+              <li key={i} className="text-sm text-gray-600">{def}</li>
+            ))}
+          </ol>
+        )}
+      </div>
 
       {term.owner && (
         <p className="text-xs text-gray-500 mb-2">Owner: <span>@{term.owner.display_name}</span></p>
@@ -72,33 +98,91 @@ export function TermDetail({ term, features, onClose, onVote, onDispute }: TermD
         </div>
       )}
 
+      {pendingSuggestions.length > 0 && (
+        <div className="mb-4 border border-blue-100 rounded-md p-3 bg-blue-50">
+          <p className="text-xs font-medium text-blue-700 uppercase mb-2">Pending Suggestions</p>
+          <ul className="space-y-3">
+            {pendingSuggestions.map((s) => (
+              <li key={s.id} className="text-sm">
+                <p className="text-gray-800 mb-1">{s.definition}</p>
+                {s.comment && <p className="text-xs text-gray-500 italic mb-2">{s.comment}</p>}
+                {(onAcceptSuggestion || onRejectSuggestion) && (
+                  <div className="flex gap-2">
+                    {onAcceptSuggestion && (
+                      <>
+                        <button
+                          onClick={() => onAcceptSuggestion(term.id, s.id, false)}
+                          className="text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                          aria-label="Add as extra definition"
+                        >
+                          + Add definition
+                        </button>
+                        <button
+                          onClick={() => onAcceptSuggestion(term.id, s.id, true)}
+                          className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                          aria-label="Replace primary definition"
+                        >
+                          Replace primary
+                        </button>
+                      </>
+                    )}
+                    {onRejectSuggestion && (
+                      <button
+                        onClick={() => onRejectSuggestion(term.id, s.id)}
+                        className="text-xs px-2 py-1 border border-gray-300 text-gray-600 rounded hover:bg-gray-100"
+                        aria-label="Reject suggestion"
+                      >
+                        Reject
+                      </button>
+                    )}
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {features.voting && (
         <div className="mt-auto pt-4 border-t border-gray-100">
-          {disputeOpen ? (
+          {suggestOpen ? (
             <div className="flex flex-col gap-2">
-              <label htmlFor="dispute-comment" className="text-xs text-gray-600 font-medium">
-                Add a comment (optional)
+              <label htmlFor="suggest-definition" className="text-xs text-gray-600 font-medium">
+                Suggested definition <span className="text-red-500">*</span>
               </label>
               <textarea
-                id="dispute-comment"
+                id="suggest-definition"
+                value={suggestedDefinition}
+                onChange={(e) => setSuggestedDefinition(e.target.value)}
+                placeholder="Enter the definition you'd like to suggest…"
+                rows={3}
+                maxLength={2000}
+                className="w-full text-sm border border-gray-300 rounded-md p-2 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+              <label htmlFor="suggest-comment" className="text-xs text-gray-600 font-medium">
+                Comment (optional)
+              </label>
+              <textarea
+                id="suggest-comment"
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                placeholder="Explain why this definition is incorrect or outdated…"
-                rows={3}
+                placeholder="Why are you suggesting this change?"
+                rows={2}
                 maxLength={500}
-                className="w-full text-sm border border-gray-300 rounded-md p-2 resize-none focus:outline-none focus:ring-2 focus:ring-orange-400"
+                className="w-full text-sm border border-gray-300 rounded-md p-2 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
               <div className="flex gap-2">
                 <button
-                  onClick={handleDisputeSubmit}
-                  aria-label="Submit dispute"
-                  className="flex-1 px-3 py-2 bg-orange-500 text-white text-sm rounded-md hover:bg-orange-600 transition-colors"
+                  onClick={handleSuggestSubmit}
+                  disabled={!suggestedDefinition.trim()}
+                  aria-label="Submit suggestion"
+                  className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Submit Dispute
+                  Submit Suggestion
                 </button>
                 <button
-                  onClick={() => { setDisputeOpen(false); setComment('') }}
-                  aria-label="Cancel dispute"
+                  onClick={() => { setSuggestOpen(false); setSuggestedDefinition(''); setComment('') }}
+                  aria-label="Cancel suggestion"
                   className="flex-1 px-3 py-2 border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 transition-colors"
                 >
                   Cancel
@@ -115,11 +199,11 @@ export function TermDetail({ term, features, onClose, onVote, onDispute }: TermD
                 👍 Vote
               </button>
               <button
-                onClick={() => setDisputeOpen(true)}
-                aria-label="Dispute this term"
+                onClick={() => setSuggestOpen(true)}
+                aria-label="Suggest a change to this term"
                 className="flex-1 px-3 py-2 border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 transition-colors"
               >
-                ⚑ Dispute
+                ✏ Suggest Change
               </button>
             </div>
           )}

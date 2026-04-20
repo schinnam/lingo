@@ -5,6 +5,7 @@ export interface Term {
   name: string
   full_name: string | null
   definition: string
+  extra_definitions: string[]
   category: string | null
   status: TermStatus
   vote_count: number
@@ -42,4 +43,14 @@ export interface CreateTermPayload {
   definition: string
   full_name?: string
   category?: string
+}
+
+export interface SuggestionResponse {
+  id: string
+  term_id: string
+  definition: string
+  comment: string | null
+  suggested_by: string
+  status: 'pending' | 'accepted' | 'rejected'
+  created_at: string | null
 }
