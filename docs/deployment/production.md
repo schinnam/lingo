@@ -134,15 +134,15 @@ APScheduler shares the FastAPI event loop. **You must run with `--workers 1`** t
 
 Always run migrations before restarting the server after an upgrade.
 
-### Slack Socket Mode — restart behavior
+### Slack Events API — retry behavior
 
-When Lingo restarts, Slack queues incoming events for approximately **30 seconds** before discarding them. Any `/lingo` commands sent during that window (deploy, crash, OOM restart) are silently dropped — Slack does not retry them after the queue expires.
+When using the Events API (HTTP), Slack will retry requests if your server is unreachable or returns an error. Slack typically retries with exponential backoff for up to 24 hours.
 
 **Operational guidance:**
 
-- Treat the 30-second window as an acceptable deployment trade-off for most teams.
-- Schedule deploys during low-traffic periods when possible.
-- If your team needs guaranteed command delivery, a future v2 enhancement can implement idempotent `event_id` deduplication at the handler layer — open [issue #26](https://github.com/schinnam/lingo/issues/26) for details.
+- **Idempotency:** Because Slack retries, your server might receive the same event multiple times. Lingo's handlers (like adding a term) are designed to be idempotent or check for existing records before acting.
+- **Timeouts:** Slack requires an HTTP 200 OK response within **3 seconds**. Lingo uses `ack()` immediately in its handlers to satisfy this requirement. If you perform heavy processing, ensure it happens in a background task (FastAPI `BackgroundTasks`).
+- **Public URL:** Ensure your reverse proxy (nginx/Caddy) correctly forwards the `X-Forwarded-For` and `X-Forwarded-Proto` headers so Slack's signature verification and challenge-response work correctly.
 
 ---
 

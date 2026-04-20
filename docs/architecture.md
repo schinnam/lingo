@@ -35,7 +35,7 @@ Lingo is a single Python service (FastAPI + asyncpg + PostgreSQL) with three cli
 
        ▲                    ▲                    ▲
   Slack Bot             CLI (httpx)         Web Browser
-  (Socket Mode)         LINGO_APP_URL       React SPA
+  (Events API)          LINGO_APP_URL       React SPA
 ```
 
 ---

@@ -23,6 +23,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from slack_bolt.async_app import AsyncApp
+from slack_sdk.web.async_client import AsyncWebClient
 
 from lingo.config import settings
 from lingo.db.session import SessionFactory
@@ -35,8 +36,14 @@ from lingo.slack.handlers import (
     handle_lingo_vote,
 )
 
-slack_app = AsyncApp(
+# Use a shared AsyncWebClient to ensure connection pooling via aiohttp
+slack_client = AsyncWebClient(
     token=settings.slack_bot_token,
+    timeout=10,  # 10s timeout for outgoing calls to Slack API
+)
+
+slack_app = AsyncApp(
+    client=slack_client,
     signing_secret=settings.slack_signing_secret or None,
     request_verification_enabled=not settings.dev_mode,
 )

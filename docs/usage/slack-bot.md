@@ -21,7 +21,7 @@ display_information:
 
 settings:
   org_deploy_enabled: false
-  socket_mode_enabled: true
+  socket_mode_enabled: false
   token_rotation_enabled: false
 
 features:
@@ -30,9 +30,17 @@ features:
     always_online: false
   slash_commands:
     - command: /lingo
+      url: https://your-lingo-host/slack/events
       description: Look up or add a Lingo term
       usage_hint: "define <term> | add <TERM> -- <definition> | vote <term> | export | token [name]"
       should_escape: false
+  events_api:
+    request_url: https://your-lingo-host/slack/events
+    bot_events:
+      - message.channels
+  interactivity:
+    is_enabled: true
+    request_url: https://your-lingo-host/slack/events
 
 oauth_config:
   redirect_urls:
@@ -49,14 +57,13 @@ oauth_config:
       - profile
 ```
 
-Replace `https://your-lingo-host` with your server's public URL (or `http://localhost:8000` for local development).
+Replace `https://your-lingo-host` with your server's public URL (must be HTTPS).
 
 After the app is created:
 
-1. **Enable Socket Mode** → In the sidebar go to **Socket Mode**, toggle it on, and generate an **App-Level Token** with the `connections:write` scope. Copy this token — it becomes `LINGO_SLACK_APP_TOKEN`.
-2. **Install to workspace** → Go to **OAuth & Permissions → Install to Workspace**. Copy the **Bot User OAuth Token** — this is `LINGO_SLACK_BOT_TOKEN`.
-3. **Copy the signing secret** → Go to **Basic Information → App Credentials** and copy **Signing Secret** — this is `LINGO_SLACK_SIGNING_SECRET`.
-4. **Copy OAuth credentials** → From the same **Basic Information** page, copy **Client ID** and **Client Secret** — these are `LINGO_SLACK_CLIENT_ID` and `LINGO_SLACK_CLIENT_SECRET` (required for web UI login).
+1. **Install to workspace** → Go to **OAuth & Permissions → Install to Workspace**. Copy the **Bot User OAuth Token** — this is `LINGO_SLACK_BOT_TOKEN`.
+2. **Copy the signing secret** → Go to **Basic Information → App Credentials** and copy **Signing Secret** — this is `LINGO_SLACK_SIGNING_SECRET`.
+3. **Copy OAuth credentials** → From the same **Basic Information** page, copy **Client ID** and **Client Secret** — these are `LINGO_SLACK_CLIENT_ID` and `LINGO_SLACK_CLIENT_SECRET` (required for web UI login).
 
 ---
 
@@ -67,11 +74,20 @@ After the app is created:
 1. Go to [api.slack.com/apps](https://api.slack.com/apps) and click **Create New App → From scratch**.
 2. Name it `Lingo` and pick your workspace.
 
-#### 2. Enable Socket Mode
+#### 2. Configure Events API
 
-In the sidebar, go to **Socket Mode** and toggle it on. Generate an **App-Level Token** with the `connections:write` scope. This becomes `LINGO_SLACK_APP_TOKEN`.
+In the sidebar, go to **Event Subscriptions** and toggle it **On**.
+1. **Request URL**: Enter `https://your-lingo-host/slack/events`.
+2. **Subscribe to bot events**: Add `message.channels`.
+3. Click **Save Changes**.
 
-#### 3. Add Bot Token Scopes
+#### 3. Configure Interactivity
+
+In the sidebar, go to **Interactivity & Shortcuts** and toggle it **On**.
+1. **Request URL**: Enter `https://your-lingo-host/slack/events`.
+2. Click **Save Changes**.
+
+#### 4. Add Bot Token Scopes
 
 Go to **OAuth & Permissions → Scopes → Bot Token Scopes** and add:
 
@@ -90,7 +106,7 @@ Also add the following **User Token Scopes** (required for web UI login via Sign
 | `email` |
 | `profile` |
 
-#### 4. Set the OAuth redirect URL
+#### 5. Set the OAuth redirect URL
 
 Go to **OAuth & Permissions → Redirect URLs** and add:
 
@@ -98,24 +114,24 @@ Go to **OAuth & Permissions → Redirect URLs** and add:
 https://your-lingo-host/auth/slack/callback
 ```
 
-#### 5. Add the slash command
+#### 6. Add the slash command
 
 Go to **Slash Commands → Create New Command**:
 
 | Field | Value |
 |---|---|
 | Command | `/lingo` |
-| Request URL | `{LINGO_APP_URL}/slack/events` |
+| Request URL | `https://your-lingo-host/slack/events` |
 | Short Description | `Look up or add a Lingo term` |
 | Usage Hint | `define <term> \| add <TERM> -- <definition> \| vote <term> \| export \| token [name]` |
 
-#### 6. Install to workspace
+#### 7. Install to workspace
 
 Go to **OAuth & Permissions → Install to Workspace**. Copy the **Bot User OAuth Token** — this is `LINGO_SLACK_BOT_TOKEN`.
 
-#### 7. Configure Lingo
+#### 8. Configure Lingo
 
-Set the environment variables and restart the server. If using Docker, you **must rebuild** the image to apply these changes.
+Set the environment variables and restart the server.
 
 ```bash
 # Bot (required for Slack bot)
@@ -144,7 +160,7 @@ After completing setup and restarting the Lingo server, open any Slack channel a
 /lingo define API
 ```
 
-Expected: Lingo replies with the term's name, definition, status, and vote count. If the term doesn't exist yet, it suggests similar ones.
+Expected: Lingo replies with the term's name, definition, status, and vote count.
 
 ### 2. Add a term
 
@@ -152,7 +168,7 @@ Expected: Lingo replies with the term's name, definition, status, and vote count
 /lingo add BART -- Bay Area Rapid Transit
 ```
 
-Expected: Lingo confirms the term was created with `suggested` status. This requires your Slack account to be linked to a Lingo account (log in via the web UI first).
+Expected: Lingo confirms the term was created with `pending` status. This requires your Slack account to be linked to a Lingo account (log in via the web UI first).
 
 ### 3. Vote on a term
 
@@ -176,7 +192,7 @@ Expected: Lingo DMs you a one-time token string. **Copy it immediately** — it 
 /lingo export
 ```
 
-Expected: Lingo replies with a Markdown-formatted list of all `official` terms.
+Expected: Lingo uploads a Markdown-formatted list of all terms.
 
 ---
 
@@ -198,7 +214,7 @@ Returns the term name, definition, status, and vote count. If no exact match is 
 /lingo add BART -- Bay Area Rapid Transit
 ```
 
-Creates a new term with `suggested` status. Requires a linked Lingo account — anonymous Slack adds are rejected to prevent orphaned terms without a responsible owner.
+Creates a new term with `pending` status. Requires a linked Lingo account — anonymous Slack adds are rejected to prevent orphaned terms without a responsible owner.
 
 ---
 
@@ -218,7 +234,7 @@ Casts your vote. When the community threshold is reached, the term automatically
 /lingo export
 ```
 
-Returns a Markdown-formatted export of all `official` terms as a Slack message.
+Returns a Markdown-formatted export of all terms as a file upload.
 
 ---
 
@@ -234,7 +250,9 @@ The bot sends direct messages automatically in two cases:
 
 ## Known limitations
 
-**Commands during restarts:** When the Lingo server restarts (deploy, crash, OOM), Slack queues `/lingo` commands for ~30 seconds before dropping them. Commands sent in that window are silently lost. See the [production deployment guide](../deployment/production.md#slack-socket-mode--restart-behavior) for details and mitigation options.
+**Public URL Required:** Unlike Socket Mode, the Events API requires your Lingo server to be reachable by Slack via a public HTTPS URL. For local development, use a tool like **ngrok** to expose your local port 8000: `ngrok http 8000`.
+
+**Verification:** When setting the Request URL in the Slack dashboard, Slack sends a `url_verification` challenge. Lingo handles this automatically, but the server must be running and reachable when you click "Save".
 
 ---
 
