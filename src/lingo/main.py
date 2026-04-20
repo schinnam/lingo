@@ -1,6 +1,5 @@
 """FastAPI application entry point."""
 
-import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -38,7 +37,8 @@ async def lifespan(app: FastAPI):
     else:
         print(
             """
-            WARNING:  Slack bot credentials (LINGO_SLACK_BOT_TOKEN or LINGO_SLACK_SIGNING_SECRET) not set. 
+            WARNING:  
+            Slack bot tokens (LINGO_SLACK_BOT_TOKEN or LINGO_SLACK_SIGNING_SECRET) not set. 
             Bot events will fail verification.
             """
         )
