@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     # OpenAI (optional — enables enhanced profanity checking via Moderation API)
     openai_api_key: str = ""
 
+    # Bootstrap — comma-separated emails to auto-promote to admin on startup
+    admin_emails: list[str] = []
+
     # Feature flags — set via env vars, e.g. LINGO_FEATURE_VOTING=false
     # Defaults to a simple experience suitable for small teams.
     feature_profanity_filter: bool = True  # Block abusive/profane term submissions

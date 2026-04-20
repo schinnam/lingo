@@ -9,10 +9,13 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
+from sqlalchemy import select
+
 from lingo.api.routes import admin, auth, export, features, slack, terms, tokens, users
 from lingo.config import settings
 from lingo.db.session import SessionFactory
 from lingo.mcp.app import mcp
+from lingo.models.user import User
 from lingo.mcp.auth import MCPBearerAuthMiddleware
 from lingo.scheduler.setup import create_scheduler
 from lingo.slack.app import slack_client
@@ -38,6 +41,17 @@ async def lifespan(app: FastAPI):
             Bot events will fail verification.
             """
         )
+
+    if settings.admin_emails:
+        async with SessionFactory() as session:
+            result = await session.execute(
+                select(User).where(User.email.in_(settings.admin_emails))
+            )
+            for user in result.scalars():
+                if user.role != "admin":
+                    user.role = "admin"
+                    print(f"INFO:     Promoted {user.email} to admin (LINGO_ADMIN_EMAILS)")
+            await session.commit()
 
     scheduler = create_scheduler(
         session_factory=SessionFactory,

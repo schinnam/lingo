@@ -17,7 +17,7 @@ import {
   useRejectSuggestion,
 } from './hooks/useTerms'
 import { useFeatures } from './hooks/useFeatures'
-import { fetchCurrentUser } from './api/auth'
+import { fetchCurrentUser, type CurrentUser } from './api/auth'
 import type { Term, TermStatus } from './types'
 
 const queryClient = new QueryClient({
@@ -30,6 +30,7 @@ function isDevMode(): boolean {
 
 function AppInner() {
   const [authStatus, setAuthStatus] = useState<'loading' | 'authed'>('loading')
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<TermStatus | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -58,7 +59,10 @@ function AppInner() {
 
   useEffect(() => {
     fetchCurrentUser()
-      .then(() => setAuthStatus('authed'))
+      .then((user) => {
+        setCurrentUser(user)
+        setAuthStatus('authed')
+      })
       .catch(() => {
         // The 401 interceptor in api/auth.ts handles the redirect to /login.
       })
@@ -105,6 +109,14 @@ function AppInner() {
       <header className="bg-white border-b border-gray-200 px-8 py-3 flex items-center gap-6">
         <h1 className="text-xl font-bold font-mono text-gray-900 whitespace-nowrap">Lingo</h1>
         <SearchBar value={search} onChange={setSearch} />
+        {currentUser?.role === 'admin' && (
+          <a
+            href="/admin"
+            className="whitespace-nowrap text-sm text-gray-500 hover:text-gray-900"
+          >
+            Admin
+          </a>
+        )}
         <button
           onClick={() => setAddModalOpen(true)}
           className="whitespace-nowrap px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
