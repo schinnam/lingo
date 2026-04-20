@@ -7,16 +7,15 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from starlette.middleware.sessions import SessionMiddleware
-
 from sqlalchemy import select
+from starlette.middleware.sessions import SessionMiddleware
 
 from lingo.api.routes import admin, auth, export, features, slack, terms, tokens, users
 from lingo.config import settings
 from lingo.db.session import SessionFactory
 from lingo.mcp.app import mcp
-from lingo.models.user import User
 from lingo.mcp.auth import MCPBearerAuthMiddleware
+from lingo.models.user import User
 from lingo.scheduler.setup import create_scheduler
 from lingo.slack.app import slack_client
 
