@@ -1,8 +1,7 @@
-.PHONY: test test-unit test-integration db-up db-down
+.PHONY: test test-unit test-integration test-ui db-up db-down ui-install ui-build ui-dev
 
 # Run all tests
-test:
-	uv run pytest
+test: test-unit test-ui
 
 # Run unit tests only (no Docker required)
 test-unit:
@@ -11,6 +10,22 @@ test-unit:
 # Run integration tests (requires postgres container)
 test-integration: db-up
 	uv run pytest tests/integration/ -v
+
+# Run frontend tests
+test-ui: ui-install
+	cd frontend && npm test
+
+# Install frontend dependencies
+ui-install:
+	cd frontend && npm install
+
+# Build frontend production assets
+ui-build: ui-install
+	cd frontend && npm run build
+
+# Start frontend dev server
+ui-dev: ui-install
+	cd frontend && npm run dev
 
 # Start the postgres container if not already running
 db-up:
