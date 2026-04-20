@@ -70,7 +70,7 @@
 
 | Feature | Status | Notes |
 |---|---|---|
-| slack-bolt AsyncApp (Socket Mode) setup | ✅ Done | `lingo/slack/app.py`; Socket Mode via `AsyncSocketModeHandler` |
+| slack-bolt AsyncApp (Events API) setup | ✅ Done | `lingo/slack/app.py`; Events API via `AsyncSlackRequestHandler` |
 | `/lingo define <term>` | ✅ Done | Case-insensitive lookup |
 | `/lingo add <term> <definition>` | ✅ Done | Dedup check; anonymous if Slack user unknown |
 | `/lingo vote <term>` | ✅ Done | Dedup guard via VoteService |
@@ -150,11 +150,11 @@
 | Unit: Scheduler Phase 5 | 17 | ✅ Passing |
 | Unit: CLI Phase 6 | 16 | ✅ Passing |
 | Unit: Web UI Phase 7 (Python) | 7 | ✅ Passing |
-| Frontend: Web UI Phase 7 (Vitest) | 47 | ✅ Passing |
+| Frontend: Web UI Phase 7 (Vitest) | 48 | ✅ Passing |
 | Integration: Postgres (real DB) | 0 | ⬜ Not Started |
 | Concurrency: vote race condition | 0 | ⬜ Not Started (P1) |
 
-**Total: 252 / 252 passing (205 pytest + 47 Vitest)**
+**Total: 299 / 299 passing (251 pytest + 48 Vitest)**
 
 ---
 
@@ -164,5 +164,5 @@
 |---|---|---|
 | Transactional vote + CAS update | P1 | ⬜ Not Started |
 | Export pagination + size cap | P2 | ⬜ Not Started |
-| Audit log (AuditEvent table) | P2 | ⬜ Not Started |
+| Audit log (AuditEvent table) | P2 | ✅ Done | Integrated into TermService & routes |
 | PDF export | P2 | ⬜ Deferred |

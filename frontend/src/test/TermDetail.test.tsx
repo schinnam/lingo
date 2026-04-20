@@ -84,11 +84,31 @@ describe('TermDetail', () => {
     expect(onVote).toHaveBeenCalledWith('abc-123')
   })
 
-  it('calls onDispute when Dispute button clicked', () => {
+  it('calls onDispute when Submit Dispute button clicked', () => {
     const onDispute = vi.fn()
     render(<TermDetail term={mockTerm} features={allFeatures} onClose={() => {}} onVote={() => {}} onDispute={onDispute} />)
-    fireEvent.click(screen.getByRole('button', { name: /dispute/i }))
-    expect(onDispute).toHaveBeenCalledWith('abc-123')
+    
+    // Step 1: Click Dispute to open the form
+    fireEvent.click(screen.getByRole('button', { name: /dispute this term/i }))
+    
+    // Step 2: Click Submit Dispute
+    fireEvent.click(screen.getByRole('button', { name: /submit dispute/i }))
+    
+    expect(onDispute).toHaveBeenCalledWith('abc-123', undefined)
+  })
+
+  it('calls onDispute with comment when Submit Dispute button clicked', () => {
+    const onDispute = vi.fn()
+    render(<TermDetail term={mockTerm} features={allFeatures} onClose={() => {}} onVote={() => {}} onDispute={onDispute} />)
+    
+    fireEvent.click(screen.getByRole('button', { name: /dispute this term/i }))
+    
+    const textarea = screen.getByPlaceholderText(/explain why this definition is incorrect/i)
+    fireEvent.change(textarea, { target: { value: 'Inaccurate definition' } })
+    
+    fireEvent.click(screen.getByRole('button', { name: /submit dispute/i }))
+    
+    expect(onDispute).toHaveBeenCalledWith('abc-123', 'Inaccurate definition')
   })
 
   it('has role=dialog and focus-able panel', () => {

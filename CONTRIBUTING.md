@@ -26,6 +26,17 @@ LINGO_DEV_MODE=true uv run uvicorn lingo.main:app --reload
 
 Server: `http://localhost:8000` — `LINGO_DEV_MODE=true` disables Slack auth so you can test locally. Log in via `http://localhost:8000/auth/dev/login?email=you@example.com` instead of going through Slack.
 
+### Testing Slack commands locally
+
+When `LINGO_DEV_MODE=true`, Slack signature verification is disabled. This allows you to test Slack integrations using `curl` without requiring `ngrok` or a real Slack connection:
+
+```bash
+# Test /lingo define
+curl -X POST http://localhost:8000/slack/events \
+     -H "Content-Type: application/x-www-form-urlencoded" \
+     -d "command=/lingo&text=define%20API&user_id=U12345&channel_id=C12345"
+```
+
 **Frontend development** — two modes:
 
 ```bash

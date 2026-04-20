@@ -195,6 +195,7 @@
 **Effort:** M → CC: ~20 min
 **Priority:** P2
 **Depends on:** REST API implementation
+**Completed:** 2026-04-16 — Added AuditEvent model, AuditService, and integrated into TermService/routes. Added b2c3d4e5f6a7 migration.
 
 ---
 

@@ -1,6 +1,6 @@
 # Slack Bot
 
-Lingo's Slack bot lets your team look up, add, and vote on terms without leaving Slack. It uses Socket Mode — no public URL or webhook configuration required.
+Lingo's Slack bot lets your team look up, add, and vote on terms without leaving Slack. It uses the Slack Events API via HTTPS.
 
 ---
 
@@ -105,7 +105,7 @@ Go to **Slash Commands → Create New Command**:
 | Field | Value |
 |---|---|
 | Command | `/lingo` |
-| Request URL | `https://example.com/slack` (placeholder — Socket Mode ignores this) |
+| Request URL | `{LINGO_APP_URL}/slack/events` |
 | Short Description | `Look up or add a Lingo term` |
 | Usage Hint | `define <term> \| add <TERM> -- <definition> \| vote <term> \| export \| token [name]` |
 
@@ -120,7 +120,6 @@ Set the environment variables and restart the server. If using Docker, you **mus
 ```bash
 # Bot (required for Slack bot)
 LINGO_SLACK_BOT_TOKEN=xoxb-...   # OAuth & Permissions -> Bot User OAuth Token
-LINGO_SLACK_APP_TOKEN=xapp-...   # Socket Mode -> App-Level Token (connections:write)
 LINGO_SLACK_SIGNING_SECRET=...   # Basic Information -> App Credentials
 
 # OAuth (required for web UI "Sign in with Slack")

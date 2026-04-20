@@ -112,10 +112,9 @@ Lingo looks up an existing user by `slack_user_id`, then by email, and creates o
 | Variable | Default | Description |
 |---|---|---|
 | `LINGO_SLACK_BOT_TOKEN` | `""` | Bot token (starts with `xoxb-`). From your Slack app's **OAuth & Permissions** page. |
-| `LINGO_SLACK_APP_TOKEN` | `""` | App-level token (starts with `xapp-`). Required for Socket Mode. |
 | `LINGO_SLACK_SIGNING_SECRET` | `""` | Signing secret from your Slack app's **Basic Information** page. |
 
-All three are required to enable the Slack bot. See the [Slack Bot guide](../usage/slack-bot.md) for setup instructions.
+Both are required to enable the Slack bot. See the [Slack Bot guide](../usage/slack-bot.md) for setup instructions.
 
 ---
 
