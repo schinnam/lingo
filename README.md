@@ -29,7 +29,9 @@ The fastest path: PostgreSQL + Lingo server with one command.
 ```bash
 git clone https://github.com/schinnam/lingo
 cd lingo
-docker compose up
+# 1. Edit docker-compose.yml or create docker-compose.override.yml with your tokens
+# 2. Build and start
+docker compose up --build
 ```
 
 The server starts at `http://localhost:8000`. Dev mode is on by default in the compose file — visit `http://localhost:8000/auth/dev/login?email=you@example.com` to log in without Slack.

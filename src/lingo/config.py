@@ -11,9 +11,6 @@ class Settings(BaseSettings):
     # Auth
     dev_mode: bool = False
     secret_key: str = "change-me-in-production"
-    oidc_client_id: str = ""
-    oidc_client_secret: str = ""
-    oidc_discovery_url: str = ""
 
     # Slack
     slack_bot_token: str = ""

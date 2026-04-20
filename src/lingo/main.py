@@ -1,5 +1,6 @@
 """FastAPI application entry point."""
 
+import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -31,6 +32,21 @@ async def lifespan(app: FastAPI):
         slack_client = AsyncWebClient(token=settings.slack_bot_token)
     app.state.slack_client = slack_client
 
+    # Start Slack bot (Socket Mode) if tokens are configured
+    slack_handler = None
+    if settings.slack_app_token and settings.slack_bot_token:
+        print("INFO:     Starting Slack bot (Socket Mode)...")
+        from slack_bolt.adapter.socket_mode.async_handler import AsyncSocketModeHandler
+
+        from lingo.slack.app import slack_app
+
+        slack_handler = AsyncSocketModeHandler(slack_app, settings.slack_app_token)
+        asyncio.create_task(slack_handler.start_async())
+    else:
+        print(
+            "WARNING:  Slack bot tokens (LINGO_SLACK_BOT_TOKEN or LINGO_SLACK_APP_TOKEN) not set. Bot will not start."
+        )
+
     scheduler = create_scheduler(
         session_factory=SessionFactory,
         slack_client=slack_client,
@@ -41,6 +57,8 @@ async def lifespan(app: FastAPI):
         yield
 
     scheduler.shutdown(wait=False)
+    if slack_handler:
+        await slack_handler.close_async()
 
 
 app = FastAPI(
