@@ -7,6 +7,7 @@ Backend selection (evaluated at call time):
 On OpenAI network failure, falls back to the local backend so availability
 issues never hard-block term creation.
 """
+
 from __future__ import annotations
 
 import asyncio
