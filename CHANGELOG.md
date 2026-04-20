@@ -3,6 +3,19 @@
 All notable changes to Lingo are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.8.0] - 2026-04-20
+
+### Added
+- **Collaborative definition suggestions:** Replaced the dispute system with a structured suggestion workflow. Users can submit a proposed definition via a "Suggest Change" button; term owners see pending suggestions with Accept, Reject, and Edit & Incorporate actions. Accept supports adding as an extra definition (up to 3 per term), replacing the primary verbatim, or blending changes via an inline editor pre-populated with the current definition. New `DefinitionSuggestion` and `TermDefinition` tables; endpoints `POST /suggest`, `GET /suggestions`, `POST /suggestions/:id/accept`, `POST /suggestions/:id/reject`. Renames `send_dispute_dm` → `send_suggestion_dm`. (#119)
+- **Profanity filter:** New `LINGO_FEATURE_PROFANITY_FILTER` flag (default: enabled) blocks abusive content in term names and definitions at submission time across all entry points (REST API returns 422, Slack bot and CLI return error messages). Uses `better-profanity` locally by default; when `LINGO_OPENAI_API_KEY` is set, switches to the OpenAI Moderation API (context-aware, 40+ languages) with automatic fallback to local on network failure. (#118)
+- **Slack Events API (HTTP):** Migrated the Slack bot from Socket Mode to the Events API over HTTPS. New `POST /slack/events` FastAPI route handles all incoming Slack events; signature verification is disabled in `dev_mode` for local testing. `LINGO_SLACK_APP_TOKEN` is no longer required. Optimized `aiohttp` with `aiodns`, `brotli`, and `speedups` extras and a shared `AsyncWebClient` with connection pooling to prevent "app did not respond" timeouts. (#116, #117)
+- **GitHub Actions CI:** Added `.github/workflows/ci.yml` — runs the full unit and integration test suite on every push and pull request. (#76)
+
+### Fixed
+- **Slack bot FastAPI lifespan:** Slack bot now registered in the FastAPI `lifespan` context manager, ensuring clean startup and shutdown. Added missing `aiohttp` dependency. (#115)
+- **CLI login stability:** Resolved edge cases in the login flow: credential directory creation, token persistence across sessions, and clearer error messages when the server is unreachable. (#106)
+- **Documentation corrections:** New terms correctly documented as starting in `pending` status (not `suggested`); admin job endpoint path corrected; missing token list and audit log endpoints added to the API reference. (#105)
+
 ## [0.7.3] - 2026-04-19
 
 ### Added
