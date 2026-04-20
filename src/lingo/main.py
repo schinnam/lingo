@@ -44,7 +44,10 @@ async def lifespan(app: FastAPI):
         asyncio.create_task(slack_handler.start_async())
     else:
         print(
-            "WARNING:  Slack bot tokens (LINGO_SLACK_BOT_TOKEN or LINGO_SLACK_APP_TOKEN) not set. Bot will not start."
+            """
+            WARNING:  Slack bot tokens (LINGO_SLACK_BOT_TOKEN or LINGO_SLACK_APP_TOKEN) not set. 
+            Bot will not start.
+            """
         )
 
     scheduler = create_scheduler(
