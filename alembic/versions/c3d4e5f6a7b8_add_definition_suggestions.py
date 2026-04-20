@@ -41,9 +41,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("ix_definition_suggestions_term_id", "definition_suggestions", ["term_id"])
-    op.create_index(
-        "ix_definition_suggestions_status", "definition_suggestions", ["status"]
-    )
+    op.create_index("ix_definition_suggestions_status", "definition_suggestions", ["status"])
 
     op.create_table(
         "term_definitions",
