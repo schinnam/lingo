@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, BackgroundTasks, Body, HTTPException, Query, Request
 from sqlalchemy import func, select
 
-from lingo.api.deps import CurrentUser, EditorUser, SessionDep, require_feature
+from lingo.api.deps import AdminUser, CurrentUser, EditorUser, SessionDep, require_feature
 from lingo.api.schemas import (
     AcceptSuggestionRequest,
     HistoryResponse,
@@ -193,7 +193,7 @@ async def update_term(
 async def delete_term(
     term_id: UUID,
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: AdminUser,
 ):
     svc = TermService(session)
     try:
