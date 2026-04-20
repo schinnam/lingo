@@ -83,7 +83,7 @@ the same data layer and auth.
 - **Database:** Postgres (asyncpg driver via SQLAlchemy 2.0 async) — native FTS, proper concurrency
 - **ORM/query layer:** SQLAlchemy 2.0 (async) — type-safe queries; Alembic for schema migrations
 - **Auth:** Authlib — OIDC/SAML middleware; supports Google Workspace, Okta, generic OIDC
-- **Slack:** slack-bolt (Python) `AsyncApp` in Socket Mode — no public URL required, works behind firewalls; static bot token (`SLACK_BOT_TOKEN` env var, no `InstallationStore` needed — single-workspace bot); lifespan shutdown: `asyncio.shield(handler.close_async())` (workaround for bolt-python #1112)
+- **Slack:** slack-bolt (Python) `AsyncApp` in Events API (HTTP) — no public URL required, works behind firewalls; static bot token (`SLACK_BOT_TOKEN` env var, no `InstallationStore` needed — single-workspace bot); lifespan shutdown: `asyncio.shield(handler.close_async())` (workaround for bolt-python #1112)
 - **MCP:** FastMCP (`fastmcp`) + `mcp` Python SDK — Streamable HTTP transport (SSE deprecated); mounted via `streamable_http_app()` on FastAPI with combined lifespan; Bearer token auth
 - **CLI:** `lingo` CLI — Typer (Click-based, type-annotated); ships as a pip-installable entry point
 - **Frontend:** React + Vite — compiled to `src/lingo/static/`, served by FastAPI as static files; Tailwind CSS + shadcn/ui
@@ -747,7 +747,7 @@ The `/setup` route:
 
 ## Next Steps
 
-Risk-first order: prototype the two highest-risk external integrations (MCP transport, Slack Socket Mode) before building full infrastructure.
+Risk-first order: prototype the two highest-risk external integrations (MCP transport, Slack Events API (HTTP)) before building full infrastructure.
 
 ## Project Structure
 
@@ -812,7 +812,7 @@ lingo/
 
 1. Scaffold Python project — `uv init`, `pyproject.toml`, `src/lingo/` skeleton, Alembic config with `run_sync` bridge, all DB migrations (all tables including Job); docker-compose `command: sh -c 'alembic upgrade head && uvicorn lingo.main:app --host 0.0.0.0 --port 8000 --workers 1'`
 2. **Spike: MCP endpoint** — validate `mcp` Python SDK Streamable HTTP transport (NOT SSE — deprecated Mar 2025 spec). Use FastMCP's `streamable_http_app()` mounted on FastAPI via combined lifespan (workaround for python-sdk #1367). Tool schemas, Bearer token auth with Claude/Cursor.
-3. **Spike: Slack Socket Mode** — validate slash command flow with `slack-bolt`, app registration requirements, Socket Mode async lifecycle
+3. **Spike: Slack Events API (HTTP)** — validate slash command flow with `slack-bolt`, app registration requirements, Events API (HTTP) async lifecycle
 4. Implement OIDC auth middleware via Authlib (Google OAuth first, then generalize to generic OIDC)
 5. Build REST API — all `/api/v1/` routes with role enforcement + optimistic locking (SQLAlchemy 2.0 async)
 6. Implement vote endpoint with DB-level transaction + row lock (P1 TODO)
@@ -830,7 +830,7 @@ lingo/
 | Review | Trigger | Why | Runs | Status | Findings |
 |--------|---------|-----|------|--------|----------|
 | CEO Review | `/plan-ceo-review` | Scope & strategy | 1 | CLEAR | 9 proposals, 8 accepted, 1 deferred; 0 critical gaps |
-| Outside Voice | `/plan-eng-review` outside voice | Independent 2nd opinion | 1 | issues_found | 10 findings: cursor granularity, Socket Mode recovery, vote lock deadlock, DEV_MODE guard, bootstrap TOCTOU, APScheduler MemoryJobStore, MCP token UX, staleness DM flood, workers enforcement, pg_trgm managed PG |
+| Outside Voice | `/plan-eng-review` outside voice | Independent 2nd opinion | 1 | issues_found | 10 findings: cursor granularity, Events API (HTTP) recovery, vote lock deadlock, DEV_MODE guard, bootstrap TOCTOU, APScheduler MemoryJobStore, MCP token UX, staleness DM flood, workers enforcement, pg_trgm managed PG |
 | Eng Review | `/plan-eng-review` | Architecture & tests (required) | 2 | CLEAR | Python migration: 17 issues resolved — MCP Streamable HTTP, APScheduler single-worker, Slack bolt stores, Alembic init container, SQLAlchemy session pattern, pg_trgm fuzzy, project structure, services/schemas layers, test infra, vote CAS (no SELECT FOR UPDATE), DEV_MODE guard, bootstrap TOCTOU, staleness rate limit, pg_trgm managed PG. 0 critical gaps. |
 | Design Review | `/plan-design-review` | UI/UX gaps | 1 | CLEAR | score: 2/10 → 9/10, 14 decisions made: search-first layout, slide-in detail, design system (Tailwind+shadcn, React+Vite, Berkeley Mono), interaction states (all surfaces), responsive+a11y |
 

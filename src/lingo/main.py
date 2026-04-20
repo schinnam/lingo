@@ -15,6 +15,7 @@ from lingo.db.session import SessionFactory
 from lingo.mcp.app import mcp
 from lingo.mcp.auth import MCPBearerAuthMiddleware
 from lingo.scheduler.setup import create_scheduler
+from lingo.slack.app import slack_client
 
 # Build the MCP ASGI app first so we can wire its lifespan into FastAPI
 _mcp_asgi = mcp.http_app(path="/")
@@ -23,12 +24,7 @@ _mcp_asgi = mcp.http_app(path="/")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Wrap FastMCP's lifespan so its session manager starts with the server."""
-    # Build Slack client only if tokens are configured
-    slack_client = None
-    if settings.slack_bot_token:
-        from slack_sdk.web.async_client import AsyncWebClient
-
-        slack_client = AsyncWebClient(token=settings.slack_bot_token)
+    # Reuse the Slack client defined in lingo.slack.app
     app.state.slack_client = slack_client
 
     # Log status for Slack bot (Events API)

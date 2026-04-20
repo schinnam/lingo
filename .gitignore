@@ -48,7 +48,7 @@ Thumbs.db
 # Docker
 *.pid
 .gstack/
-
+docker-compose.override.yml
 
 # zenical
 site/
