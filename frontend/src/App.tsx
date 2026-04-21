@@ -17,7 +17,7 @@ import {
   useRejectSuggestion,
 } from './hooks/useTerms'
 import { useFeatures } from './hooks/useFeatures'
-import { fetchCurrentUser, type CurrentUser } from './api/auth'
+import { fetchCurrentUser, logout, type CurrentUser } from './api/auth'
 import type { Term, TermStatus } from './types'
 
 const queryClient = new QueryClient({
@@ -123,6 +123,16 @@ function AppInner() {
           aria-label="Add term"
         >
           + Add
+        </button>
+        <div className="flex-1" />
+        {currentUser && (
+          <span className="text-sm text-gray-500">{currentUser.display_name}</span>
+        )}
+        <button
+          onClick={() => logout()}
+          className="whitespace-nowrap text-sm text-gray-500 hover:text-gray-900"
+        >
+          Logout
         </button>
       </header>
 
