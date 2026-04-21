@@ -81,5 +81,5 @@ dev = [
     "aiosqlite>=0.22.1",
     "asgi-lifespan>=2.1.0",
     "pip-audit>=2.10.0",
-    "ruff>=0.9.0",
+    "ruff>=0.15.11",
 ]
