@@ -44,6 +44,16 @@ export LINGO_APP_URL=http://localhost:8000
 
 ## Commands
 
+### `lingo <term>` — quick look up
+
+```bash
+lingo API
+```
+
+Shorthand for `lingo define <term>`. Type the term directly — no subcommand needed.
+
+---
+
 ### `lingo define` — look up a term
 
 ```bash

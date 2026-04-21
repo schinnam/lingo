@@ -395,3 +395,65 @@ class TestJsonFlag:
         assert result.exit_code == 0
         parsed = json.loads(result.output)
         assert parsed == []
+
+
+# ---------------------------------------------------------------------------
+# lingo <term> shorthand (dispatches to define)
+# ---------------------------------------------------------------------------
+
+
+_BART_TERM = {
+    "id": "00000000-0000-0000-0000-000000000001",
+    "name": "BART",
+    "full_name": "Business Arts Resource Tool",
+    "definition": "A centralized hub for resource allocation.",
+    "category": "Operations",
+    "status": "official",
+    "vote_count": 12,
+    "is_stale": False,
+    "version": 1,
+    "source": "user",
+    "owner_id": None,
+}
+
+
+class TestShorthand:
+    def test_shorthand_term_routes_to_define(self):
+        """'lingo BART' should look up the term without the 'define' subcommand."""
+        with patch("lingo.cli.main.httpx.Client") as mock_client_cls:
+            mock_client = mock_client_cls.return_value.__enter__.return_value
+            mock_client.get.return_value = _mock_response(_terms_envelope([_BART_TERM]))
+            result = runner.invoke(app, ["BART"])
+
+        assert result.exit_code == 0
+        assert "BART" in result.output
+        assert "Business Arts Resource Tool" in result.output
+
+    def test_shorthand_not_found(self):
+        with patch("lingo.cli.main.httpx.Client") as mock_client_cls:
+            mock_client = mock_client_cls.return_value.__enter__.return_value
+            mock_client.get.return_value = _mock_response(_terms_envelope([]))
+            result = runner.invoke(app, ["NOPE"])
+
+        assert result.exit_code == 1
+
+    def test_explicit_define_still_works(self):
+        """'lingo define BART' must continue to work unchanged."""
+        with patch("lingo.cli.main.httpx.Client") as mock_client_cls:
+            mock_client = mock_client_cls.return_value.__enter__.return_value
+            mock_client.get.return_value = _mock_response(_terms_envelope([_BART_TERM]))
+            result = runner.invoke(app, ["define", "BART"])
+
+        assert result.exit_code == 0
+        assert "BART" in result.output
+
+    def test_known_commands_are_not_treated_as_terms(self):
+        """'lingo list' must still route to the list command, not define."""
+        with patch("lingo.cli.main.httpx.Client") as mock_client_cls:
+            mock_client = mock_client_cls.return_value.__enter__.return_value
+            mock_client.get.return_value = _mock_response(_terms_envelope([]))
+            result = runner.invoke(app, ["list"])
+
+        # list command exits 0 even with no terms
+        assert result.exit_code == 0
+        assert "No terms found." in result.output
