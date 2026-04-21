@@ -65,3 +65,8 @@ export async function acceptSuggestion(
 export async function rejectSuggestion(termId: string, suggestionId: string): Promise<void> {
   await axios.post(`/api/v1/terms/${termId}/suggestions/${suggestionId}/reject`)
 }
+
+export async function markTermOfficial(id: string): Promise<Term> {
+  const res = await axios.post<Term>(`/api/v1/terms/${id}/official`)
+  return res.data
+}

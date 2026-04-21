@@ -15,6 +15,7 @@ import {
   useSuggestions,
   useAcceptSuggestion,
   useRejectSuggestion,
+  useMarkTermOfficial,
 } from './hooks/useTerms'
 import { useFeatures } from './hooks/useFeatures'
 import { fetchCurrentUser, logout, type CurrentUser } from './api/auth'
@@ -45,6 +46,7 @@ function AppInner() {
   const { data: suggestions } = useSuggestions(selectedId)
   const acceptSuggestion = useAcceptSuggestion()
   const rejectSuggestion = useRejectSuggestion()
+  const markTermOfficial = useMarkTermOfficial()
 
   const terms = data?.items ?? []
 
@@ -185,8 +187,10 @@ function AppInner() {
             <TermDetail
               term={detail}
               features={features}
+              isEditor={currentUser?.role === 'editor' || currentUser?.role === 'admin'}
               onClose={() => setSelectedId(null)}
               onVote={(id) => voteTerm.mutate(id)}
+              onMarkOfficial={(id) => markTermOfficial.mutate(id)}
               onSuggest={(id, definition, comment) =>
                 suggestDefinition.mutate({ id, definition, comment })
               }

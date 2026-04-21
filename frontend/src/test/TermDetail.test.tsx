@@ -144,6 +144,73 @@ describe('TermDetail', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument()
   })
 
+  describe('Mark Official button', () => {
+    const communityTerm = { ...mockTerm, status: 'community' as const }
+
+    it('shows Mark Official button for editors on non-official terms', () => {
+      const onMarkOfficial = vi.fn()
+      render(
+        <TermDetail
+          term={communityTerm}
+          features={allFeatures}
+          isEditor={true}
+          onClose={() => {}}
+          onVote={() => {}}
+          onSuggest={() => {}}
+          onMarkOfficial={onMarkOfficial}
+        />
+      )
+      expect(screen.getByRole('button', { name: /mark this term as official/i })).toBeInTheDocument()
+    })
+
+    it('does not show Mark Official button for non-editors', () => {
+      render(
+        <TermDetail
+          term={communityTerm}
+          features={allFeatures}
+          isEditor={false}
+          onClose={() => {}}
+          onVote={() => {}}
+          onSuggest={() => {}}
+          onMarkOfficial={vi.fn()}
+        />
+      )
+      expect(screen.queryByRole('button', { name: /mark this term as official/i })).not.toBeInTheDocument()
+    })
+
+    it('does not show Mark Official button when term is already official', () => {
+      render(
+        <TermDetail
+          term={mockTerm}
+          features={allFeatures}
+          isEditor={true}
+          onClose={() => {}}
+          onVote={() => {}}
+          onSuggest={() => {}}
+          onMarkOfficial={vi.fn()}
+        />
+      )
+      expect(screen.queryByRole('button', { name: /mark this term as official/i })).not.toBeInTheDocument()
+    })
+
+    it('calls onMarkOfficial with term id when clicked', () => {
+      const onMarkOfficial = vi.fn()
+      render(
+        <TermDetail
+          term={communityTerm}
+          features={allFeatures}
+          isEditor={true}
+          onClose={() => {}}
+          onVote={() => {}}
+          onSuggest={() => {}}
+          onMarkOfficial={onMarkOfficial}
+        />
+      )
+      fireEvent.click(screen.getByRole('button', { name: /mark this term as official/i }))
+      expect(onMarkOfficial).toHaveBeenCalledWith('abc-123')
+    })
+  })
+
   describe('incorporate flow', () => {
     const pendingSuggestion = {
       id: 'sug-1',
