@@ -53,9 +53,7 @@ class TestReservedNames:
     async def test_reserved_name_raises(self, session, member_user):
         svc = TermService(session)
         with pytest.raises(ReservedNameError):
-            await svc.create(
-                name="define", definition="some definition", created_by=member_user.id
-            )
+            await svc.create(name="define", definition="some definition", created_by=member_user.id)
 
     async def test_reserved_name_case_insensitive(self, session, member_user):
         svc = TermService(session)
@@ -69,9 +67,7 @@ class TestReservedNames:
         svc = TermService(session)
         for name in RESERVED_TERM_NAMES:
             with pytest.raises(ReservedNameError):
-                await svc.create(
-                    name=name, definition="some definition", created_by=member_user.id
-                )
+                await svc.create(name=name, definition="some definition", created_by=member_user.id)
 
     async def test_non_reserved_name_allowed(self, session, member_user):
         svc = TermService(session)
