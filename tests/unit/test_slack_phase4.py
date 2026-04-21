@@ -171,6 +171,20 @@ class TestLingoAdd:
         text = say.call_args[0][0]
         assert "already exists" in text.lower() or "API" in text
 
+    async def test_reserved_name_is_rejected(self, factory, seeded):
+        say = AsyncMock()
+        owner = seeded["owner"]
+        await handle_lingo_add(
+            term_name="define",
+            definition="some definition",
+            slack_user_id=owner.slack_user_id,
+            say=say,
+            session_factory=factory,
+        )
+        say.assert_called_once()
+        text = say.call_args[0][0]
+        assert "reserved" in text.lower()
+
     async def test_unknown_slack_user_cannot_add_term(self, factory, seeded):
         say = AsyncMock()
         await handle_lingo_add(

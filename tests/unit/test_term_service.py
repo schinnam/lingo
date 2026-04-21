@@ -4,7 +4,13 @@ import pytest
 from sqlalchemy import select
 
 from lingo.models import Term, TermHistory
-from lingo.services.term_service import TermNotFoundError, TermService, VersionConflictError
+from lingo.services.term_service import (
+    RESERVED_TERM_NAMES,
+    ReservedNameError,
+    TermNotFoundError,
+    TermService,
+    VersionConflictError,
+)
 
 
 class TestCreateTerm:
@@ -41,6 +47,38 @@ class TestCreateTerm:
         row = await session.get(Term, term.id)
         assert row is not None
         assert row.name == "CI"
+
+
+class TestReservedNames:
+    async def test_reserved_name_raises(self, session, member_user):
+        svc = TermService(session)
+        with pytest.raises(ReservedNameError):
+            await svc.create(
+                name="define", definition="some definition", created_by=member_user.id
+            )
+
+    async def test_reserved_name_case_insensitive(self, session, member_user):
+        svc = TermService(session)
+        for variant in ("DEFINE", "Define", "ADD", "Export"):
+            with pytest.raises(ReservedNameError):
+                await svc.create(
+                    name=variant, definition="some definition", created_by=member_user.id
+                )
+
+    async def test_all_reserved_names_blocked(self, session, member_user):
+        svc = TermService(session)
+        for name in RESERVED_TERM_NAMES:
+            with pytest.raises(ReservedNameError):
+                await svc.create(
+                    name=name, definition="some definition", created_by=member_user.id
+                )
+
+    async def test_non_reserved_name_allowed(self, session, member_user):
+        svc = TermService(session)
+        term = await svc.create(
+            name="BART", definition="Business Arts Resource Tool", created_by=member_user.id
+        )
+        assert term.name == "BART"
 
 
 class TestGetTerm:

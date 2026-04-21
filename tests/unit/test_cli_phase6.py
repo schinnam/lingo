@@ -175,6 +175,18 @@ class TestAdd:
         result = runner.invoke(app, ["add", "ONLY_TERM"])
         assert result.exit_code != 0
 
+    def test_add_reserved_name_returns_error(self):
+        """Server rejects reserved names with 422; CLI should exit non-zero."""
+        with patch("lingo.cli.main.httpx.Client") as mock_client_cls:
+            mock_client = mock_client_cls.return_value.__enter__.return_value
+            mock_client.post.return_value = _mock_response(
+                {"detail": '"define" is a reserved command name and cannot be used as a term.'},
+                status_code=422,
+            )
+            result = runner.invoke(app, ["add", "define", "some definition"])
+
+        assert result.exit_code == 1
+
 
 # ---------------------------------------------------------------------------
 # lingo list
