@@ -28,6 +28,7 @@ from lingo.services.term_service import (
     InvalidStatusTransitionError,
     ProfanityError,
     RelationshipNotFoundError,
+    ReservedNameError,
     SuggestionNotFoundError,
     TermNotFoundError,
     TermService,
@@ -88,6 +89,8 @@ async def create_term(
             category=body.category,
             created_by=current_user.id,
         )
+    except ReservedNameError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
     except ProfanityError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
     await AuditService(session).log(

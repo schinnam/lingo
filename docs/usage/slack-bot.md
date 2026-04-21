@@ -32,7 +32,7 @@ features:
     - command: /lingo
       url: https://your-lingo-host/slack/events
       description: Look up or add a Lingo term
-      usage_hint: "define <term> | add <TERM> -- <definition> | vote <term> | export | token [name]"
+      usage_hint: "<term> | define <term> | add <TERM> -- <definition> | vote <term> | export | token [name]"
       should_escape: false
   events_api:
     request_url: https://your-lingo-host/slack/events
@@ -123,7 +123,7 @@ Go to **Slash Commands → Create New Command**:
 | Command | `/lingo` |
 | Request URL | `https://your-lingo-host/slack/events` |
 | Short Description | `Look up or add a Lingo term` |
-| Usage Hint | `define <term> \| add <TERM> -- <definition> \| vote <term> \| export \| token [name]` |
+| Usage Hint | `<term> \| define <term> \| add <TERM> -- <definition> \| vote <term> \| export \| token [name]` |
 
 #### 7. Install to workspace
 
@@ -155,6 +155,12 @@ docker compose up --build
 After completing setup and restarting the Lingo server, open any Slack channel and verify each integration surface:
 
 ### 1. Slash command responds
+
+```
+/lingo API
+```
+
+or the explicit form:
 
 ```
 /lingo define API
@@ -197,6 +203,16 @@ Expected: Lingo uploads a Markdown-formatted list of all terms.
 ---
 
 ## Slash commands
+
+### `/lingo <term>` — quick look up
+
+```
+/lingo API
+```
+
+Shorthand for `/lingo define <term>`. Type the term directly after `/lingo` — no subcommand needed.
+
+---
 
 ### `/lingo define <term>` — look up a term
 

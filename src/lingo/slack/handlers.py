@@ -16,7 +16,7 @@ from sqlalchemy import select
 from lingo.models.term import Term
 from lingo.models.token import Token
 from lingo.models.user import User
-from lingo.services.term_service import ProfanityError, TermService
+from lingo.services.term_service import ProfanityError, ReservedNameError, TermService
 from lingo.services.vote_service import AlreadyVotedError, VoteService
 
 
@@ -95,6 +95,12 @@ async def handle_lingo_add(
                 created_by=user.id,
                 source="slack",
             )
+        except ReservedNameError:
+            await say(
+                f'"{term_name}" is a reserved command name and cannot be used as a term. '
+                "Please choose a different name."
+            )
+            return
         except ProfanityError:
             await say(
                 "Sorry, your submission contains content that is not allowed. "

@@ -16,10 +16,12 @@ import json
 import os
 from pathlib import Path
 
+import click
 import httpx
 import typer
 from rich.console import Console
 from rich.table import Table
+from typer.core import TyperGroup
 
 
 def _config_path() -> Path:
@@ -42,10 +44,22 @@ def _save_credentials(data: dict) -> None:
     _config_path().write_text(json.dumps(data, indent=2))
 
 
+class _FallbackGroup(TyperGroup):
+    """Routes unknown first argument to 'define' as a term-lookup shorthand."""
+
+    def resolve_command(self, ctx: click.Context, args: list[str]):
+        try:
+            return super().resolve_command(ctx, args)
+        except click.UsageError:
+            define_cmd = self.get_command(ctx, "define")
+            return "define", define_cmd, args
+
+
 app = typer.Typer(
     name="lingo",
     help="Lingo — company glossary CLI",
     no_args_is_help=True,
+    cls=_FallbackGroup,
 )
 console = Console()
 err_console = Console(stderr=True, style="bold red")

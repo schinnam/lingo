@@ -20,12 +20,36 @@ __all__ = [
     "InvalidStatusTransitionError",
     "ProfanityError",
     "RelationshipNotFoundError",
+    "ReservedNameError",
+    "RESERVED_TERM_NAMES",
     "SuggestionNotFoundError",
     "TermNotFoundError",
     "TermService",
     "TooManyDefinitionsError",
     "VersionConflictError",
 ]
+
+# Words reserved by the /lingo Slack command and the lingo CLI. A term whose
+# name matches one of these (case-insensitively) would shadow a command when
+# users type the shorthand `/lingo <term>` or `lingo <term>`.
+RESERVED_TERM_NAMES: frozenset[str] = frozenset(
+    {
+        # Slack /lingo sub-commands
+        "define",
+        "add",
+        "vote",
+        "export",
+        "token",
+        "help",
+        # CLI lingo sub-commands
+        "list",
+        "login",
+    }
+)
+
+
+class ReservedNameError(Exception):
+    pass
 
 
 class TermNotFoundError(Exception):
@@ -70,6 +94,10 @@ class TermService:
         category: str | None = None,
         source: str = "user",
     ) -> Term:
+        if name.strip().lower() in RESERVED_TERM_NAMES:
+            raise ReservedNameError(
+                f'"{name}" is a reserved command name and cannot be used as a term.'
+            )
         await check_content(name=name, definition=definition)
         term = Term(
             name=name,
