@@ -6,9 +6,11 @@ import { StatusBadge } from './StatusBadge'
 interface TermDetailProps {
   term: TermDetailType
   features: Features
+  isEditor?: boolean
   onClose: () => void
   onVote: (id: string) => void
   onSuggest: (id: string, definition: string, comment?: string) => void
+  onMarkOfficial?: (id: string) => void
   suggestions?: SuggestionResponse[]
   onAcceptSuggestion?: (
     termId: string,
@@ -22,9 +24,11 @@ interface TermDetailProps {
 export function TermDetail({
   term,
   features,
+  isEditor = false,
   onClose,
   onVote,
   onSuggest,
+  onMarkOfficial,
   suggestions,
   onAcceptSuggestion,
   onRejectSuggestion,
@@ -209,6 +213,18 @@ export function TermDetail({
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {features.voting && isEditor && term.status !== 'official' && onMarkOfficial && (
+        <div className="mb-3">
+          <button
+            onClick={() => onMarkOfficial(term.id)}
+            aria-label="Mark this term as official"
+            className="w-full px-3 py-2 bg-emerald-600 text-white text-sm rounded-md hover:bg-emerald-700 transition-colors"
+          >
+            Mark Official
+          </button>
         </div>
       )}
 

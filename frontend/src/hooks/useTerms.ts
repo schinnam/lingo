@@ -8,6 +8,7 @@ import {
   fetchSuggestions,
   acceptSuggestion,
   rejectSuggestion,
+  markTermOfficial,
 } from '../api/terms'
 import type { TermStatus, CreateTermPayload } from '../types'
 
@@ -98,6 +99,17 @@ export function useRejectSuggestion() {
       rejectSuggestion(termId, suggestionId),
     onSuccess: (_data, { termId }) => {
       qc.invalidateQueries({ queryKey: ['suggestions', termId] })
+    },
+  })
+}
+
+export function useMarkTermOfficial() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => markTermOfficial(id),
+    onSuccess: (_data, id) => {
+      qc.invalidateQueries({ queryKey: ['terms'] })
+      qc.invalidateQueries({ queryKey: ['term', id] })
     },
   })
 }
