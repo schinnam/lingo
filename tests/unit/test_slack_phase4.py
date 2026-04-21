@@ -3,6 +3,8 @@
 Strategy:
   - Commands (/lingo define, add, vote, export) tested by calling handler
     functions directly with AsyncMock Slack say/client objects.
+  - Dispatch logic tested by calling lingo_command directly with mocked
+    ack/command/say/client objects.
   - Notification helpers (dispute DM, promotion notice, staleness DM)
     tested by calling them directly and asserting the right Slack API calls.
   - No real Slack connection needed — fully in-memory with SQLite.
@@ -10,13 +12,14 @@ Strategy:
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from lingo.models import Term, User
 from lingo.models.base import Base
+from lingo.slack.app import lingo_command
 from lingo.slack.handlers import (
     handle_lingo_add,
     handle_lingo_define,
@@ -394,3 +397,98 @@ class TestStalenessDM:
             session_factory=factory,
         )
         client.chat_postMessage.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# /lingo <term> dispatch (shorthand + command routing)
+# ---------------------------------------------------------------------------
+
+
+def _make_command(text: str, user_id: str = "U_OWNER", channel_id: str = "C_TEST"):
+    return {"text": text, "user_id": user_id, "channel_id": channel_id}
+
+
+class TestLingoCommandDispatch:
+    async def test_shorthand_term_routes_to_define(self, factory, seeded):
+        """'/lingo API' should look up the term directly."""
+        ack = AsyncMock()
+        say = AsyncMock()
+        client = AsyncMock()
+        with patch("lingo.slack.app.SessionFactory", factory):
+            await lingo_command(ack=ack, command=_make_command("API"), say=say, client=client)
+        ack.assert_called_once()
+        say.assert_called_once()
+        assert "API" in say.call_args[0][0]
+
+    async def test_shorthand_unknown_term_returns_not_found(self, factory, seeded):
+        ack = AsyncMock()
+        say = AsyncMock()
+        client = AsyncMock()
+        with patch("lingo.slack.app.SessionFactory", factory):
+            await lingo_command(ack=ack, command=_make_command("NOPE"), say=say, client=client)
+        say.assert_called_once()
+        text = say.call_args[0][0]
+        assert "not found" in text.lower() or "NOPE" in text
+
+    async def test_empty_text_shows_full_help(self, factory, seeded):
+        ack = AsyncMock()
+        say = AsyncMock()
+        client = AsyncMock()
+        with patch("lingo.slack.app.SessionFactory", factory):
+            await lingo_command(ack=ack, command=_make_command(""), say=say, client=client)
+        say.assert_called_once()
+        text = say.call_args[0][0]
+        assert "define" in text and "add" in text and "vote" in text
+
+    async def test_help_command_shows_full_help(self, factory, seeded):
+        ack = AsyncMock()
+        say = AsyncMock()
+        client = AsyncMock()
+        with patch("lingo.slack.app.SessionFactory", factory):
+            await lingo_command(ack=ack, command=_make_command("help"), say=say, client=client)
+        say.assert_called_once()
+        text = say.call_args[0][0]
+        assert "define" in text and "add" in text and "vote" in text
+
+    async def test_bare_define_shows_usage_hint(self, factory, seeded):
+        """/lingo define (no term) should show define-specific usage."""
+        ack = AsyncMock()
+        say = AsyncMock()
+        client = AsyncMock()
+        with patch("lingo.slack.app.SessionFactory", factory):
+            await lingo_command(ack=ack, command=_make_command("define"), say=say, client=client)
+        say.assert_called_once()
+        text = say.call_args[0][0]
+        assert "define <term>" in text.lower() or "/lingo define" in text
+
+    async def test_bare_vote_shows_usage_hint(self, factory, seeded):
+        ack = AsyncMock()
+        say = AsyncMock()
+        client = AsyncMock()
+        with patch("lingo.slack.app.SessionFactory", factory):
+            await lingo_command(ack=ack, command=_make_command("vote"), say=say, client=client)
+        say.assert_called_once()
+        text = say.call_args[0][0]
+        assert "vote <term>" in text.lower() or "/lingo vote" in text
+
+    async def test_bare_add_shows_usage_hint(self, factory, seeded):
+        ack = AsyncMock()
+        say = AsyncMock()
+        client = AsyncMock()
+        with patch("lingo.slack.app.SessionFactory", factory):
+            await lingo_command(ack=ack, command=_make_command("add"), say=say, client=client)
+        say.assert_called_once()
+        text = say.call_args[0][0]
+        assert "add <term>" in text.lower() or "/lingo add" in text
+
+    async def test_define_with_term_still_works(self, factory, seeded):
+        """/lingo define API (explicit command) should still work."""
+        ack = AsyncMock()
+        say = AsyncMock()
+        client = AsyncMock()
+        with patch("lingo.slack.app.SessionFactory", factory):
+            await lingo_command(
+                ack=ack, command=_make_command("define API"), say=say, client=client
+            )
+        say.assert_called_once()
+        assert "API" in say.call_args[0][0]

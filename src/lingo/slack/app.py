@@ -1,6 +1,7 @@
 """Slack AsyncApp (HTTP Events) for Lingo.
 
 Commands:
+  /lingo <term>                    — quick look up (shorthand for define)
   /lingo define <term>
   /lingo add <term> -- <definition>
   /lingo vote <term>
@@ -49,6 +50,19 @@ slack_app = AsyncApp(
 )
 
 
+_COMMANDS = frozenset({"define", "add", "vote", "export", "token", "help"})
+
+_HELP_TEXT = (
+    "*Lingo commands:*\n"
+    "• `/lingo <term>` — quick look up (shorthand for define)\n"
+    "• `/lingo define <term>` — look up a term\n"
+    "• `/lingo add <term> -- <definition>` — add a new term\n"
+    "• `/lingo vote <term>` — vote for a term\n"
+    "• `/lingo export` — download the full glossary\n"
+    "• `/lingo token [name]` — generate an API token for CLI/MCP use"
+)
+
+
 @slack_app.command("/lingo")
 async def lingo_command(ack, command, say, client):
     await ack()
@@ -56,29 +70,49 @@ async def lingo_command(ack, command, say, client):
     channel_id = command.get("channel_id", "")
     slack_user_id = command.get("user_id", "")
 
-    if text.startswith("define "):
-        term_name = text[len("define ") :].strip()
+    parts = text.split(None, 1)
+    first_word = parts[0].lower() if parts else ""
+    rest = parts[1].strip() if len(parts) > 1 else ""
+
+    if not text or first_word == "help":
+        await say(_HELP_TEXT)
+
+    elif first_word not in _COMMANDS:
+        # Treat entire text as a term name — shorthand for define
         await handle_lingo_define(
-            term_name=term_name,
+            term_name=text,
             say=say,
             session_factory=SessionFactory,
         )
 
-    elif text.startswith("add "):
-        # Format: add <term> -- <definition>
-        remainder = text[len("add ") :].strip()
-        if " -- " in remainder:
-            term_name, definition = remainder.split(" -- ", 1)
+    elif first_word == "define":
+        if not rest:
+            await say("Usage: `/lingo define <term>`\nExample: `/lingo define SLA`")
+            return
+        await handle_lingo_define(
+            term_name=rest,
+            say=say,
+            session_factory=SessionFactory,
+        )
+
+    elif first_word == "add":
+        if not rest:
+            await say(
+                "Usage: `/lingo add <term> -- <definition>`\n"
+                "Example: `/lingo add SLA -- Service Level Agreement`"
+            )
+            return
+        if " -- " in rest:
+            term_name, definition = rest.split(" -- ", 1)
         else:
-            parts = remainder.split(None, 1)
-            if len(parts) < 2:
+            sub_parts = rest.split(None, 1)
+            if len(sub_parts) < 2:
                 await say(
                     "Usage: `/lingo add <term> -- <definition>`\n"
                     "Example: `/lingo add SLA -- Service Level Agreement`"
                 )
                 return
-            term_name, definition = parts
-
+            term_name, definition = sub_parts
         await handle_lingo_add(
             term_name=term_name.strip(),
             definition=definition.strip(),
@@ -87,25 +121,26 @@ async def lingo_command(ack, command, say, client):
             session_factory=SessionFactory,
         )
 
-    elif text.startswith("vote "):
-        term_name = text[len("vote ") :].strip()
+    elif first_word == "vote":
+        if not rest:
+            await say("Usage: `/lingo vote <term>`\nExample: `/lingo vote SLA`")
+            return
         await handle_lingo_vote(
-            term_name=term_name,
+            term_name=rest,
             slack_user_id=slack_user_id,
             say=say,
             session_factory=SessionFactory,
         )
 
-    elif text == "export":
+    elif first_word == "export":
         await handle_lingo_export(
             channel_id=channel_id,
             client=client,
             session_factory=SessionFactory,
         )
 
-    elif text == "token" or text.startswith("token "):
-        remainder = text[len("token") :].strip()
-        token_name = remainder if remainder else "Slack CLI token"
+    elif first_word == "token":
+        token_name = rest if rest else "Slack CLI token"
         raw, error = await handle_lingo_token(
             slack_user_id=slack_user_id,
             name=token_name,
@@ -129,16 +164,6 @@ async def lingo_command(ack, command, say, client):
                     "*MCP usage:* set `LINGO_API_TOKEN` in your MCP server environment."
                 ),
             )
-
-    else:
-        await say(
-            "*Lingo commands:*\n"
-            "• `/lingo define <term>` — look up a term\n"
-            "• `/lingo add <term> -- <definition>` — add a new term\n"
-            "• `/lingo vote <term>` — vote for a term\n"
-            "• `/lingo export` — download the full glossary\n"
-            "• `/lingo token [name]` — generate an API token for CLI/MCP use"
-        )
 
 
 @slack_app.action(re.compile(r"^staleness_confirm_.+"))
