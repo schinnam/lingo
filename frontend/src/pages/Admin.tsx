@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fetchCurrentUser, type CurrentUser } from '../api/auth'
+import { fetchCurrentUser, logout, type CurrentUser } from '../api/auth'
 import {
   useAdminUsers,
   useUpdateUserRole,
@@ -252,6 +252,12 @@ function AdminInner() {
         {currentUser && (
           <span className="text-sm text-gray-500">{currentUser.display_name}</span>
         )}
+        <button
+          onClick={() => logout()}
+          className="whitespace-nowrap text-sm text-gray-500 hover:text-gray-900"
+        >
+          Logout
+        </button>
       </header>
 
       <div className="border-b border-gray-200 bg-white px-8">
