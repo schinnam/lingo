@@ -13,11 +13,15 @@ from starlette.middleware.sessions import SessionMiddleware
 from lingo.api.routes import admin, auth, export, features, slack, terms, tokens, users
 from lingo.config import settings
 from lingo.db.session import SessionFactory
+from lingo.log import configure_logging, get_logger
 from lingo.mcp.app import mcp
 from lingo.mcp.auth import MCPBearerAuthMiddleware
 from lingo.models.user import User
 from lingo.scheduler.setup import create_scheduler
 from lingo.slack.app import slack_client
+
+configure_logging(settings.log_level)
+logger = get_logger(__name__)
 
 # Build the MCP ASGI app first so we can wire its lifespan into FastAPI
 _mcp_asgi = mcp.http_app(path="/")
@@ -31,14 +35,11 @@ async def lifespan(app: FastAPI):
 
     # Log status for Slack bot (Events API)
     if settings.slack_signing_secret and settings.slack_bot_token:
-        print("INFO:     Slack bot (Events API) enabled.")
+        logger.info("Slack bot (Events API) enabled.")
     else:
-        print(
-            """
-            WARNING:  
-            Slack bot tokens (LINGO_SLACK_BOT_TOKEN or LINGO_SLACK_SIGNING_SECRET) not set. 
-            Bot events will fail verification.
-            """
+        logger.warning(
+            "Slack bot tokens (LINGO_SLACK_BOT_TOKEN or LINGO_SLACK_SIGNING_SECRET) not set. "
+            "Bot events will fail verification."
         )
 
     if settings.admin_emails:
@@ -49,7 +50,7 @@ async def lifespan(app: FastAPI):
             for user in result.scalars():
                 if user.role != "admin":
                     user.role = "admin"
-                    print(f"INFO:     Promoted {user.email} to admin (LINGO_ADMIN_EMAILS)")
+                    logger.info("Promoted %s to admin (LINGO_ADMIN_EMAILS)", user.email)
             await session.commit()
 
     scheduler = create_scheduler(

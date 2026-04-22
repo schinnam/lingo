@@ -17,10 +17,12 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 
+from lingo.log import get_logger
 from lingo.models.job import Job, JobStatus, JobType
 from lingo.models.term import Term
 
 _ACRONYM_RE = re.compile(r"\b[A-Z]{2,6}\b")
+logger = get_logger(__name__)
 
 
 async def run_discovery_job(
@@ -30,6 +32,7 @@ async def run_discovery_job(
     lookback_days: int = 90,
 ) -> None:
     """Run the discovery job and persist a Job record."""
+    logger.info("Discovery job started")
     job = Job(job_type=JobType.discovery, status=JobStatus.running)
     async with session_factory() as sess:
         sess.add(job)
@@ -52,7 +55,9 @@ async def run_discovery_job(
                 "terms_found": terms_found,
             }
             await sess.commit()
+        logger.info("Discovery job complete: %d channels scanned, %d new terms found", channels_scanned, terms_found)
     except Exception as exc:
+        logger.error("Discovery job failed: %s", exc, exc_info=True)
         async with session_factory() as sess:
             j = await sess.get(Job, job_id)
             j.status = JobStatus.failed

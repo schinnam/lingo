@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     # Bootstrap — comma-separated emails to auto-promote to admin on startup
     admin_emails: list[str] = []
 
+    # Logging
+    log_level: str = "INFO"
+
     # Feature flags — set via env vars, e.g. LINGO_FEATURE_VOTING=false
     # Defaults to a simple experience suitable for small teams.
     feature_profanity_filter: bool = True  # Block abusive/profane term submissions

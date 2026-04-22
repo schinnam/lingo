@@ -16,10 +16,13 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 
+from lingo.log import get_logger
 from lingo.models.job import Job, JobStatus, JobType
 from lingo.models.term import Term
 from lingo.models.user import User
 from lingo.slack.notifications import send_staleness_dm
+
+logger = get_logger(__name__)
 
 
 async def run_staleness_job(
@@ -29,6 +32,7 @@ async def run_staleness_job(
     stale_threshold_days: int,
 ) -> None:
     """Run the staleness job and persist a Job record."""
+    logger.info("Staleness job started")
     job = Job(job_type=JobType.staleness, status=JobStatus.running)
     async with session_factory() as sess:
         sess.add(job)
@@ -51,7 +55,9 @@ async def run_staleness_job(
                 "dms_sent": dms_sent,
             }
             await sess.commit()
+        logger.info("Staleness job complete: %d terms flagged, %d DMs sent", terms_flagged, dms_sent)
     except Exception as exc:
+        logger.error("Staleness job failed: %s", exc, exc_info=True)
         async with session_factory() as sess:
             j = await sess.get(Job, job_id)
             j.status = JobStatus.failed
