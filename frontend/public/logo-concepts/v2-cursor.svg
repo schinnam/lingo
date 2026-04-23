@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <rect width="64" height="64" fill="#1a1a2e"/>
+  <!-- I-beam top serif (wider than stem, highlights cursor metaphor) -->
+  <rect x="10" y="10" width="17" height="4" fill="#66ffdd"/>
+  <!-- Vertical cursor stem -->
+  <rect x="14" y="10" width="9" height="44" fill="#00d4aa"/>
+  <!-- Horizontal definition rule (shorter, leaves room for cursor cap) -->
+  <rect x="23" y="45" width="22" height="9" fill="#00d4aa"/>
+  <!-- Cursor position indicator at end of rule (lighter, suggests active typing) -->
+  <rect x="45" y="45" width="9" height="9" fill="#66ffdd"/>
+</svg>

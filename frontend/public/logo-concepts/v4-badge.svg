@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Rounded square badge — works as app icon / favicon -->
+  <rect width="64" height="64" rx="14" fill="#1a1a2e"/>
+  <!-- Subtle teal border ring -->
+  <rect x="1.5" y="1.5" width="61" height="61" rx="12.5" fill="none" stroke="#00d4aa" stroke-width="1.5" stroke-opacity="0.25"/>
+  <!-- L mark with slight rounding -->
+  <rect x="14" y="10" width="9" height="44" rx="2" fill="#00d4aa"/>
+  <rect x="14" y="45" width="36" height="9" rx="2" fill="#00d4aa"/>
+</svg>
