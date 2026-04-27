@@ -29,7 +29,7 @@ dependencies = [
     "fastmcp>=3.2.4,<4.0.0",
     "mcp>=1.27.0,<2.0.0",
     # CLI
-    "typer>=0.24.1,<1.0.0",
+    "typer>=0.25.0,<1.0.0",
     "rich>=15.0.0,<16.0.0",
     # Scheduler
     "apscheduler>=3.11.2,<4.0.0",
