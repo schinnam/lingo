@@ -16,7 +16,7 @@ dependencies = [
     "asyncpg>=0.31.0,<1.0.0",
     "alembic>=1.18.4,<2.0.0",
     # Auth
-    "authlib>=1.7.0,<2.0.0",
+    "authlib>=1.7.2,<2.0.0",
     "itsdangerous>=2.2.0,<3.0.0",
     "httpx>=0.28.1,<1.0.0",
     # Slack
